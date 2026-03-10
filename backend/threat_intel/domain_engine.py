@@ -20,14 +20,11 @@ def evaluate_domains(dns_queries, tls_sni_domains):
         if not domain:
             continue
 
-        # Normalize domain
         domain = domain.lower().strip().rstrip(".")
 
-        # Remove port if present
         if ":" in domain:
             domain = domain.split(":")[0]
 
-        # Remove subdomain
         base_domain = ".".join(domain.split(".")[-2:])
 
         # Local test domains

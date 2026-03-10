@@ -26,11 +26,9 @@ oui_parser = manuf.MacParser()
 def resolve_vendor(mac_full):
     vendor = oui_parser.get_manuf(mac_full)
 
-    # If no vendor found → fallback to OUI
     if not vendor:
         return mac_full.upper().replace(":", "")[:6]
 
-    # If vendor name looks invalid (too short / no space / weird format)
     if len(vendor) < 6 or re.match(r"^[A-Za-z0-9]+$", vendor):
         return mac_full.upper().replace(":", "")[:6]
 
@@ -42,7 +40,6 @@ def resolve_vendor(mac_full):
 
 def classify_ip(ip):
     try:
-        # Take first IP if comma-separated
         ip = ip.split(",")[0].strip()
         ip_obj = ipaddress.ip_address(ip)
     except:
@@ -166,7 +163,7 @@ def analyze_tcp_behavior_advanced(file_path):
         "destinations": defaultdict(int),
         "handshakes": {},
         "handshake_completed": 0,
-        "ja3": Counter()  # NEW
+        "ja3": Counter()
     })
 
     dst_targets = defaultdict(lambda: {
@@ -175,7 +172,7 @@ def analyze_tcp_behavior_advanced(file_path):
         "packets": 0
     })
 
-    global_ja3_usage = Counter()  # NEW
+    global_ja3_usage = Counter()
 
     cmd = [
         "tshark",
@@ -642,7 +639,7 @@ def extract_stats_core(file_path):
         "top_senders": src_ips.most_common(50),
         "top_receivers": dst_ips.most_common(50),
         "ip_distribution": dict(ip_types),
-        "tcp": {}  # will be filled by run_tcp_analysis()
+        "tcp": {}
     }
 
 
@@ -778,7 +775,6 @@ def extract_stats_streaming(file_path):
             if ts:
                 timestamps.append(ts)
 
-            # SINGLE IP FIX
             src = src.split(",")[0].strip() if src else None
             dst = dst.split(",")[0].strip() if dst else None
 
@@ -845,7 +841,6 @@ def extract_stats_streaming(file_path):
             if dns_query:
                 detected_protocols.append("DNS")
 
-            # Update counters
             for proto in detected_protocols:
                 protocol_counts[proto] += 1
 
@@ -889,19 +884,15 @@ def extract_stats_streaming(file_path):
                         "icmp_identifier": icmp_id or None
                     })
 
-            # DNS FIX
             if dns_query:
                 domains.add(dns_query.strip())
 
-            # HTTP FIX
             if http_host and http_uri:
                 urls.add(f"http://{http_host}{http_uri}")
 
-            # MAC Vendor
             if eth_src:
                 mac_vendors[resolve_vendor(eth_src)] += 1
 
-            # GEO FIX
             for ip in [src, dst]:
                 if ip and geo_reader and classify_ip(ip) == "Public":
 
@@ -915,7 +906,6 @@ def extract_stats_streaming(file_path):
                         except:
                             continue
 
-                    # This must run for EVERY packet
                     country_name = public_ip_geo[ip]["country"]
                     country_traffic[country_name] += 1
 

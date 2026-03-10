@@ -99,7 +99,6 @@ def normalize_alerts(alerts):
             "alerts": data["alerts"]
         })
 
-    # Sort by severity first, then count
     return sorted(
         result,
         key=lambda x: (x["highest_severity"], -x["alert_count"])

@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.services.threat_intel import check_ip_reputation
 from backend.utils.system_info import get_host_system_info
 from backend.core.analysis_recommender import AnalysisRecommender
-import uuid
 from backend.analysis_engine import analyze_parallel, analysis_progress
 from backend.utils.file_validation import validate_pcap_file
 
