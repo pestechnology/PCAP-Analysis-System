@@ -1,6 +1,4 @@
-import os
 import subprocess
-import mimetypes
 
 ALLOWED_EXTENSIONS = {
     ".pcap",
@@ -44,7 +42,6 @@ def is_valid_pcap_signature(file_path: str) -> bool:
         if result.returncode != 0:
             return False
 
-        # If capinfos recognizes it, it will print "File type:"
         return "File type:" in result.stdout
 
     except Exception:

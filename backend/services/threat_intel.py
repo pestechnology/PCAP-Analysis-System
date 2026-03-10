@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 # CONFIG
 # ======================================================
 
-VT_API_KEY = os.getenv("VT_API_KEY")  # set in environment
+VT_API_KEY = os.getenv("VT_API_KEY")
 VT_BASE_URL = "https://www.virustotal.com/api/v3"
 
 # Simple in-memory cache

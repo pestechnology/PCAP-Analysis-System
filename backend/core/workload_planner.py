@@ -4,7 +4,6 @@ def plan_workload(file_size_bytes, system_profile):
     cores = system_profile["cpu_cores"]
     ram = system_profile["available_ram_gb"]
 
-    # Decide workers
     if ram < 4:
         workers = 1
     elif ram < 8:
@@ -14,7 +13,6 @@ def plan_workload(file_size_bytes, system_profile):
     else:
         workers = min(8, cores)
 
-    # Decide chunk size
     if file_size_mb < 50:
         chunk_packets = 100000
     elif file_size_mb < 500:

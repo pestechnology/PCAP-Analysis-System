@@ -72,10 +72,8 @@ def analyze_parallel(file_path, chunk_packets=None):
     merged_result["tcp_behavior"] = analyze_tcp_behavior_advanced(file_path)
     suricata_result = analyze_abnormal_activity_suricata(file_path)
 
-    # Extract flagged entities for UI
     flagged_entities = suricata_result.get("flagged_entities", [])
 
-    # Flatten alerts for HTTP detection
     suricata_alerts = []
 
     for entity in flagged_entities:
@@ -83,15 +81,12 @@ def analyze_parallel(file_path, chunk_packets=None):
         if isinstance(alerts, list):
             suricata_alerts.extend(alerts)
 
-    # Send structured data to UI
     merged_result["abnormal_activity"] = {
         "flagged_entities": flagged_entities
     }
 
-    # HTTP malicious detection
     merged_result["http_threats"] = extract_http_malicious_alerts(suricata_alerts)
 
-    # Extract TLS metadata (already used in Intelligence)
     tls_metadata = extract_tls_metadata(file_path)
     merged_result["tls_metadata"] = tls_metadata
 
@@ -99,7 +94,6 @@ def analyze_parallel(file_path, chunk_packets=None):
     # DOMAIN THREAT INTELLIGENCE
     # -------------------------------
 
-    # DNS domains already merged in merged_result["domains"]
     dns_records = [{"query": d} for d in merged_result.get("domains", [])]
 
     domain_alerts = evaluate_domains(
@@ -111,7 +105,6 @@ def analyze_parallel(file_path, chunk_packets=None):
 
     analysis_progress[job_id]["status"] = "done"
 
-    # Use the proper metadata function defined at top
     metadata = get_capture_metadata(file_path)
     merged_result.setdefault("http_threats", [])
 
@@ -152,9 +145,8 @@ def merge_results(a, b):
             a[field][k] = a[field].get(k, 0) + v
 
     # ================================
-    # Country Traffic (CRITICAL FIX)
+    # Country Traffic
     # ================================
-    # Convert list of tuples → Counter
     a_country = Counter(dict(a.get("country_traffic", [])))
     b_country = Counter(dict(b.get("country_traffic", [])))
 
@@ -260,7 +252,6 @@ def get_capture_metadata(file_path):
                 value = line.split(":", 1)[1].strip()
                 metadata["capture_duration"] = float(value.split()[0])
 
-            # Snapshot length FIX
             elif "snapshot length" in line.lower() or "packet size limit" in line.lower():
 
                 value = line.split(":", 1)[1].strip()

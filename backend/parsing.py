@@ -47,7 +47,7 @@ def extract_capture_metadata(file_path):
         duration = 0
 
     # =====================================================
-    # Extract snapshot length + link layer (SAFE FIX)
+    # Extract snapshot length + link layer
     # =====================================================
 
     capinfo_cmd = ["capinfos", file_path]
@@ -59,9 +59,7 @@ def extract_capture_metadata(file_path):
     for line in capinfo.stdout.splitlines():
         clean_line = line.strip()
 
-        # Handle both:
-        # "Snapshot length: 65535"
-        # "File header snapshot length: (not set)"
+
         if "snapshot length" in clean_line.lower():
             value = clean_line.split(":")[-1].strip()
 

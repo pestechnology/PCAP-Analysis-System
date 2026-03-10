@@ -14,7 +14,6 @@ def extract_http_malicious_alerts(suricata_alerts):
 
     for alert in suricata_alerts:
 
-        # Skip invalid alert formats
         if not isinstance(alert, dict):
             continue
 
