@@ -1,0 +1,35 @@
+def extract_http_malicious_alerts(suricata_alerts):
+
+    http_alerts = []
+
+    http_keywords = [
+        "http",
+        "user-agent",
+        "web",
+        "uri",
+        "trojan",
+        "c2",
+        "malware"
+    ]
+
+    for alert in suricata_alerts:
+
+        # Skip invalid alert formats
+        if not isinstance(alert, dict):
+            continue
+
+        signature = str(alert.get("signature", "")).lower()
+        category = str(alert.get("category", "")).lower()
+
+        if any(keyword in signature for keyword in http_keywords) or \
+           any(keyword in category for keyword in http_keywords):
+
+            http_alerts.append({
+                "signature": alert.get("signature"),
+                "category": alert.get("category"),
+                "severity": alert.get("severity"),
+                "src_ip": alert.get("src_ip"),
+                "dest_ip": alert.get("dest_ip")
+            })
+
+    return http_alerts

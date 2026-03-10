@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Virtual Environment
+venv/
+.env
+
+# Temporary files
+tmp/
+*.tmp
+
+# IDE files
+.idea/
+.vscode/
+
+# Node
+node_modules/
+npm-debug.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python cache
+*.cache
+
+# Docker
+*.pid

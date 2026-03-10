@@ -1,0 +1,19 @@
+from collections import defaultdict
+
+
+class FlowEngine:
+    def __init__(self):
+        self.flows = defaultdict(list)
+
+    def build_flows(self, parsed_packets):
+        for pkt in parsed_packets:
+            key = (
+                pkt.get("src_ip"),
+                pkt.get("dst_ip"),
+                pkt.get("src_port"),
+                pkt.get("dst_port"),
+                pkt.get("protocol")
+            )
+            self.flows[key].append(pkt)
+
+        return dict(self.flows)

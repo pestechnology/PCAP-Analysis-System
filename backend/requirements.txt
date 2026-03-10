@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+requests
+scapy
+pycountry
+geoip2
+psutil
+manuf
