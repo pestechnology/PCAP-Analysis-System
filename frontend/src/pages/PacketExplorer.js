@@ -1,0 +1,167 @@
+import { useParams, useNavigate } from "react-router-dom";
+import { useState, useMemo } from "react";
+
+export default function PacketExplorer({ data }) {
+
+    const { protocol } = useParams();
+    const navigate = useNavigate();
+
+    const [srcFilter, setSrcFilter] = useState("");
+    const [dstFilter, setDstFilter] = useState("");
+    const [lengthFilter, setLengthFilter] = useState("");
+
+    // SAFE ACCESS
+    const packets =
+        data?.protocol_packets?.[protocol] || [];
+
+    /* ===============================
+       Timestamp Formatter
+    =============================== */
+    const formatTimestamp = (ts) => {
+        if (!ts) return "-";
+
+        const date = new Date(ts * 1000);
+
+        return date.toLocaleString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+        });
+    };
+
+    /* ===============================
+       Filtering Logic
+    =============================== */
+    const filteredPackets = useMemo(() => {
+        return packets.filter((pkt) => {
+
+            const matchSrc =
+                !srcFilter ||
+                pkt.src?.toLowerCase().includes(srcFilter.toLowerCase());
+
+            const matchDst =
+                !dstFilter ||
+                pkt.dst?.toLowerCase().includes(dstFilter.toLowerCase());
+
+            const matchLength =
+                !lengthFilter ||
+                String(pkt.length).includes(lengthFilter);
+
+            return matchSrc && matchDst && matchLength;
+        });
+    }, [packets, srcFilter, dstFilter, lengthFilter]);
+
+    /* ===============================
+       Render Guards AFTER Hooks
+    =============================== */
+
+    if (!data || !data.protocol_packets) {
+        return <div className="card">No packet data available.</div>;
+    }
+
+    return (
+        <div className="card">
+            <div className="card-title">
+                {protocol} Packets ({filteredPackets.length})
+            </div>
+
+            <button
+                onClick={() => navigate(-1)}
+                style={{
+                    marginBottom: "15px",
+                    background: "none",
+                    border: "1px solid #3a3a3c",
+                    color: "#0A84FF",
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    cursor: "pointer"
+                }}
+            >
+                ← Back
+            </button>
+
+            {/* FILTER BAR */}
+            <div style={filterBar}>
+                <input
+                    placeholder="Filter Source IP"
+                    value={srcFilter}
+                    onChange={(e) => setSrcFilter(e.target.value)}
+                    style={filterInput}
+                />
+                <input
+                    placeholder="Filter Destination IP"
+                    value={dstFilter}
+                    onChange={(e) => setDstFilter(e.target.value)}
+                    style={filterInput}
+                />
+                <input
+                    placeholder="Filter Length"
+                    value={lengthFilter}
+                    onChange={(e) => setLengthFilter(e.target.value)}
+                    style={filterInput}
+                />
+            </div>
+
+            {filteredPackets.length === 0 ? (
+                <div>No packets found for this protocol.</div>
+            ) : (
+                <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+                    <table className="ip-table">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Timestamp</th>
+                            <th>Source</th>
+                            <th>Destination</th>
+                            <th>Length</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {filteredPackets.map(pkt => (
+                            <tr
+                                key={pkt.id}
+                                style={{ cursor: "pointer" }}
+                                onClick={() =>
+                                    navigate(`/packet/${pkt.id}`, {
+                                        state: { packet: pkt }
+                                    })
+                                }
+                            >
+                                <td>{pkt.id}</td>
+                                <td>{formatTimestamp(pkt.timestamp)}</td>
+                                <td>{pkt.src || "-"}</td>
+                                <td>{pkt.dst || "-"}</td>
+                                <td>{pkt.length}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* ===============================
+   Styles
+=============================== */
+
+const filterBar = {
+    display: "flex",
+    gap: "12px",
+    marginBottom: "20px",
+};
+
+const filterInput = {
+    flex: 1,
+    padding: "8px 12px",
+    borderRadius: "6px",
+    border: "1px solid #3a3a3c",
+    background: "#2a2a2c",
+    color: "white",
+    fontSize: "13px",
+    outline: "none"
+};
