@@ -430,3 +430,74 @@ backend/geoip/GeoLite2-City.mmdb
 ```
 
 ---
+
+# VirusTotal API Configuration
+
+The threat intelligence module integrates with the **VirusTotal API** to enrich IP and domain reputation data.
+
+To enable VirusTotal lookups, the developer must configure an API key using an environment variable.
+
+## Step 1: Create a VirusTotal API Key
+
+1. Visit the VirusTotal website:
+   
+   https://www.virustotal.com
+
+2. Create a free account or sign in.
+
+3. Navigate to the **API Key** section in your account settings.
+
+4. Copy your **VirusTotal API Key**.
+
+---
+
+## Step 2: Create Environment File
+
+Inside the **backend directory**, create a file named:
+
+```
+.env
+```
+
+Example directory location:
+
+```
+pcap_analysis_system/backend/.env
+```
+
+---
+
+## Step 3: Add the API Key
+
+Add the following line inside the `.env` file:
+
+```
+INTEL_API_KEY=<your_virustotal_api_key>
+```
+
+Example:
+
+```
+INTEL_API_KEY=abc123xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+---
+
+## Step 4: Restart the Application
+
+After adding the API key, restart the backend service or Docker containers so the environment variable is loaded.
+
+Example:
+
+```
+docker compose down
+docker compose up
+```
+
+---
+
+## Important Notes
+
+- The `.env` file should **not be committed to Git**.
+- Ensure `.env` is included in `.gitignore`.
+- Without the VirusTotal API key, **threat intelligence enrichment features will not function**.
