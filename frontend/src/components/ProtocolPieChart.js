@@ -1,87 +1,99 @@
-import React, { useEffect, useRef } from "react";
+import React, { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-    Chart,
-    PieController,
-    ArcElement,
-    Tooltip,
-    Legend
-} from "chart.js";
-
-Chart.register(PieController, ArcElement, Tooltip, Legend);
 
 export default function ProtocolPieChart({ distribution = {} }) {
-
-    const canvasRef = useRef(null);
-    const chartRef = useRef(null);
     const navigate = useNavigate();
 
-    useEffect(() => {
-
-        if (!distribution || Object.keys(distribution).length === 0) return;
-
-        if (chartRef.current) chartRef.current.destroy();
-
-        const labels = Object.keys(distribution);
-        const values = Object.values(distribution);
-
-        chartRef.current = new Chart(canvasRef.current, {
-            type: "pie",
-            data: {
-                labels,
-                datasets: [{
-                    data: values,
-                    backgroundColor: [
-                        "#0A84FF",
-                        "#30D158",
-                        "#FF9F0A",
-                        "#FF453A",
-                        "#BF5AF2",
-                        "#64D2FF",
-                        "#FFD60A",
-                        "#AC8E68",
-                        "#2f2985",
-                    ],
-                    borderWidth: 1,
-                    borderColor: "rgba(28,28,30,0.05)"
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: "top",
-                        labels: {
-                            color: "#ffffff",
-                            padding: 14,
-                            boxWidth: 12
-                        }
-                    },
-                    tooltip: {
-                        backgroundColor: "#2c2c2e",
-                        titleColor: "#fff",
-                        bodyColor: "#fff"
-                    }
-                },
-                onClick: (event, elements) => {
-                    if (!elements.length) return;
-
-                    const index = elements[0].index;
-                    const protocol = labels[index];
-
-                    navigate(`/protocol/${protocol}`);
-                }
-            }
+    const { total, items } = useMemo(() => {
+        let sum = 0;
+        const mapped = Object.entries(distribution).map(([label, count]) => {
+            sum += count;
+            return { label, count };
         });
 
-    }, [distribution, navigate]);
+        // Professional Apple-esque dashboard colors
+        const fallbackColors = [
+            "#0EA5E9", "#B200FF", "#00FF66", "#FF9900", 
+            "#FF003C", "#64D2FF", "#FFD60A", "#AC8E68", "#2f2985"
+        ];
+
+        return {
+            total: sum,
+            items: mapped.map((item, i) => ({
+                ...item,
+                percent: sum > 0 ? (item.count / sum) * 100 : 0,
+                color: fallbackColors[i % fallbackColors.length]
+            })).sort((a, b) => b.count - a.count)
+        };
+    }, [distribution]);
+
+    if (total === 0) {
+        return (
+            <div className="card">
+                <div className="card-title">Protocol Distribution</div>
+                <div className="muted" style={{ padding: "40px 0", textAlign: "center" }}>No protocol data detected.</div>
+            </div>
+        );
+    }
 
     return (
         <div className="card">
-            <div className="card-title">Protocol Distribution</div>
-            <div style={{ height: "300px" }}>
-                <canvas ref={canvasRef} />
+            <div className="card-title" style={{ marginBottom: "26px", letterSpacing: "0.5px" }}>
+                Protocol Distribution
+            </div>
+
+            <div style={{ 
+                display: "grid", 
+                gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", 
+                gap: "16px" 
+            }}>
+                {items.map((item, idx) => (
+                    <div 
+                        key={idx}
+                        onClick={() => navigate(`/protocol/${item.label}`)}
+                        className="protocol-card-hover"
+                        style={{ 
+                            background: "rgba(255,255,255,0.02)", 
+                            borderRadius: "10px", 
+                            padding: "16px",
+                            cursor: "pointer",
+                            border: "1px solid rgba(255,255,255,0.05)",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                            minHeight: "100px"
+                        }}
+                    >
+                        {/* Header Row */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                            <div style={{ 
+                                width: "8px", 
+                                height: "8px", 
+                                borderRadius: "2px", 
+                                background: item.color,
+                                boxShadow: `0 0 8px ${item.color}40`
+                            }}></div>
+                            <span style={{ fontSize: "13px", color: "var(--text-primary)", fontWeight: 600, letterSpacing: "0.5px" }}>
+                                {item.label}
+                            </span>
+                        </div>
+
+                        {/* Values */}
+                        <div>
+                            <div style={{ fontSize: "22px", fontWeight: 700, fontFamily: "var(--font-heading)", color: "var(--text-primary)", lineHeight: "1.1" }}>
+                                {item.percent.toFixed(1)}%
+                            </div>
+                            <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "4px", fontFamily: "var(--font-mono)" }}>
+                                {item.count.toLocaleString()} pkt
+                            </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div style={{ width: "100%", height: "4px", background: "rgba(255,255,255,0.08)", borderRadius: "2px", marginTop: "14px", overflow: "hidden" }}>
+                            <div style={{ width: `${item.percent}%`, height: "100%", background: item.color, borderRadius: "2px", transition: "width 1s cubic-bezier(0.16, 1, 0.3, 1)" }} />
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );

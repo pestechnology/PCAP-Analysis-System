@@ -23,7 +23,7 @@ export default function CountryTrafficCard({ data = [] }) {
                     <div className="table-scroll custom-scroll">
                         <table className="ip-table">
                             <tbody>
-                            {data.map((item, index) => (
+                            {data.filter(item => item[0] && item[0] !== "Unknown").map((item, index) => (
                                 <tr key={index}>
                                     <td>{item[0]}</td>
                                     <td className="right">{item[1]}</td>

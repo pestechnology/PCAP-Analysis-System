@@ -25,7 +25,7 @@ export default function MacVendorCard({ vendors = [] }) {
                                         href={`https://macvendors.com/query/${item[0]}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        style={{ color: "#0A84FF", textDecoration: "none" }}
+                                        style={{ color: "var(--accent-blue)", textDecoration: "none" }}
                                     >
                                         {item[0]}
                                     </a>

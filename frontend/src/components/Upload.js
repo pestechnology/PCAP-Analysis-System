@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { analyzePCAP } from "../api";
 
 export default function Upload({ onResult }) {
@@ -6,6 +6,7 @@ export default function Upload({ onResult }) {
     const [file, setFile] = useState(null);
     const [mode, setMode] = useState("—");
     const [analyzing, setAnalyzing] = useState(false);
+    const [progressStep, setProgressStep] = useState(0);
 
     const allowedExtensions = [
         ".pcap",
@@ -15,6 +16,28 @@ export default function Upload({ onResult }) {
         ".pcap.gz",
         ".pcapng.gz"
     ];
+
+    const stages = [
+        "Uploading capture...",
+        "Parsing packets...",
+        "Running IDS detection...",
+        "Extracting artifacts...",
+        "Enriching threat intelligence...",
+        "Generating SOC report..."
+    ];
+
+    useEffect(() => {
+        if (!analyzing) {
+            setProgressStep(0);
+            return;
+        }
+
+        // Simulate progress through stages
+        const interval = setInterval(() => {
+            setProgressStep(prev => prev < stages.length - 1 ? prev + 1 : prev);
+        }, 800);
+        return () => clearInterval(interval);
+    }, [analyzing]);
 
     const handleFileChange = (e) => {
         const selected = e.target.files[0];
@@ -57,18 +80,29 @@ export default function Upload({ onResult }) {
             setAnalyzing(true);
 
             const result = await analyzePCAP(file);
-            onResult(result);
+            
+            // Allow the last stage to show very briefly if analysis was fast
+            setTimeout(() => {
+                onResult(result);
+                setAnalyzing(false);
+            }, 800);
 
         } catch (err) {
             console.error("Upload failed:", err);
             alert("Backend not reachable or analysis failed.");
-        } finally {
             setAnalyzing(false);
         }
     };
 
     return (
-        <div className="upload-wrapper">
+        <div className="upload-wrapper" style={{ position: "relative" }}>
+
+            {analyzing && (
+                <div className="loader-overlay">
+                    <div className="loader-spinner"></div>
+                    <p>{stages[progressStep]}</p>
+                </div>
+            )}
 
             <div className="upload-container">
 
@@ -77,10 +111,11 @@ export default function Upload({ onResult }) {
                         type="file"
                         accept=".pcap,.pcapng,.cap,.dump,.pcap.gz,.pcapng.gz"
                         onChange={handleFileChange}
+                        disabled={analyzing}
                     />
-                    <span className="upload-button">
-                    Upload PCAP
-                </span>
+                    <span className="upload-button" style={{ opacity: analyzing ? 0.5 : 1 }}>
+                        Upload PCAP
+                    </span>
                 </label>
 
                 <div
@@ -93,7 +128,7 @@ export default function Upload({ onResult }) {
                 <button
                     className="analyze-button"
                     onClick={submit}
-                    disabled={analyzing}
+                    disabled={analyzing || !file}
                 >
                     {analyzing ? "Analyzing..." : "Analyze"}
                 </button>
@@ -112,12 +147,10 @@ export default function Upload({ onResult }) {
                                 : "neutral"
                     }`}
                 >
-        {mode}
-    </span>
+                    {mode}
+                </span>
             </div>
-
 
         </div>
     );
-
 }

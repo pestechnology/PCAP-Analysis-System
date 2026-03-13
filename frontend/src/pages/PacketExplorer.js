@@ -72,12 +72,13 @@ export default function PacketExplorer({ data }) {
                 onClick={() => navigate(-1)}
                 style={{
                     marginBottom: "15px",
-                    background: "none",
-                    border: "1px solid #3a3a3c",
-                    color: "#0A84FF",
+                    background: "transparent",
+                    border: "1px solid var(--border-subtle)",
+                    color: "var(--accent-blue)",
                     padding: "6px 12px",
                     borderRadius: "6px",
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    fontSize: "13px"
                 }}
             >
                 ← Back
@@ -159,9 +160,10 @@ const filterInput = {
     flex: 1,
     padding: "8px 12px",
     borderRadius: "6px",
-    border: "1px solid #3a3a3c",
-    background: "#2a2a2c",
-    color: "white",
+    border: "1px solid var(--border-subtle)",
+    background: "var(--bg-panel)",
+    color: "var(--text-primary)",
     fontSize: "13px",
+    fontFamily: "var(--font-mono)",
     outline: "none"
 };

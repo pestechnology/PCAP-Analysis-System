@@ -194,12 +194,13 @@ export default function ProtocolTimelineChart({ timeline = {} }) {
                         onClick={() => setMode("relative")}
                         style={{
                             marginRight: "8px",
-                            background: mode === "relative" ? "#3a3a3c" : "transparent",
-                            border: "1px solid #3a3a3c",
-                            color: "#fff",
+                            background: mode === "relative" ? "var(--bg-panel-hover)" : "transparent",
+                            border: "1px solid var(--border-subtle)",
+                            color: "var(--text-primary)",
                             padding: "4px 8px",
                             borderRadius: "6px",
-                            cursor: "pointer"
+                            cursor: "pointer",
+                            transition: "all 0.2s ease"
                         }}
                     >
                         Relative
@@ -208,12 +209,13 @@ export default function ProtocolTimelineChart({ timeline = {} }) {
                     <button
                         onClick={() => setMode("absolute")}
                         style={{
-                            background: mode === "absolute" ? "#3a3a3c" : "transparent",
-                            border: "1px solid #3a3a3c",
-                            color: "#fff",
+                            background: mode === "absolute" ? "var(--bg-panel-hover)" : "transparent",
+                            border: "1px solid var(--border-subtle)",
+                            color: "var(--text-primary)",
                             padding: "4px 8px",
                             borderRadius: "6px",
-                            cursor: "pointer"
+                            cursor: "pointer",
+                            transition: "all 0.2s ease"
                         }}
                     >
                         Absolute
