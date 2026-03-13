@@ -18,7 +18,7 @@ def recv_exact(sock, size):
 
 class TCPReceiver:
 
-    def __init__(self, host="0.0.0.0", port=8080):
+    def __init__(self, host="0.0.0.0", port=80):
         self.host = host
         self.port = port
         self.running = False
@@ -108,7 +108,7 @@ class TCPReceiver:
             self.server_socket.close()
 
 if __name__ == "__main__":
-    receiver = TCPReceiver(host="0.0.0.0", port=8080)
+    receiver = TCPReceiver(host="0.0.0.0", port=80)
     receiver.start()
 
     try:

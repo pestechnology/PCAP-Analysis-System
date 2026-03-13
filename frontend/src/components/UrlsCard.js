@@ -28,12 +28,11 @@ export default function UrlsCard({ urls = [] }) {
                         {urls.map((url, index) => (
                             <li
                                 key={index}
+                                className="scroll-item"
                                 style={{
-                                    padding: "10px 0",
-                                    borderBottom:
-                                        "1px solid rgba(255,255,255,0.05)",
-                                    fontSize: "14px",
-                                    wordBreak: "break-all"
+                                    wordBreak: "break-all",
+                                    color: "var(--text-secondary)",
+                                    fontFamily: "var(--font-mono)"
                                 }}
                             >
                                 {url}

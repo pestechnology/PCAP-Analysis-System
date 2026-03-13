@@ -1,9 +1,5 @@
 export default function HttpThreatsCard({ threats }) {
 
-    if (!threats || threats.length === 0) {
-        return null;
-    }
-
     return (
         <div className="card mac-card">
 
@@ -11,31 +7,33 @@ export default function HttpThreatsCard({ threats }) {
                 Unencrypted Malicious HTTP
             </div>
 
-            {/* SCROLLABLE BODY */}
-            <div
-                className="card-body mac-scroll"
-                style={{
-                    maxHeight: "300px",
-                    overflowY: "auto",
-                    paddingRight: "6px"
-                }}
-            >
+            {(!threats || threats.length === 0) ? (
+                <div className="muted">No unencrypted threats detected</div>
+            ) : (
+                <div
+                    className="card-body mac-scroll"
+                    style={{
+                        maxHeight: "300px",
+                        overflowY: "auto",
+                        paddingRight: "6px"
+                    }}
+                >
 
                 {threats.map((alert, index) => {
 
                     const severityColor =
                         alert.severity === 1
-                            ? "#ff4d4f"
+                            ? "var(--accent-red)"
                             : alert.severity === 2
-                                ? "#ffa940"
-                                : "#fadb14";
+                                ? "var(--accent-orange)"
+                                : "var(--accent-cyan)";
 
                     return (
                         <div
                             key={index}
+                            className="scroll-item"
                             style={{
                                 paddingBottom: "10px",
-                                borderBottom: "1px solid rgba(255,255,255,0.05)"
                             }}
                         >
 
@@ -43,7 +41,8 @@ export default function HttpThreatsCard({ threats }) {
                                 style={{
                                     fontWeight: 600,
                                     color: severityColor,
-                                    marginBottom: "4px"
+                                    marginBottom: "4px",
+                                    fontFamily: "var(--font-heading)"
                                 }}
                             >
                                 {alert.signature}
@@ -52,7 +51,8 @@ export default function HttpThreatsCard({ threats }) {
                             <div
                                 style={{
                                     fontSize: "12px",
-                                    opacity: 0.85
+                                    color: "var(--text-secondary)",
+                                    fontFamily: "var(--font-mono)"
                                 }}
                             >
                                 {alert.src_ip} → {alert.dest_ip}
@@ -61,7 +61,8 @@ export default function HttpThreatsCard({ threats }) {
                             <div
                                 style={{
                                     fontSize: "12px",
-                                    opacity: 0.7
+                                    color: "var(--text-secondary)",
+                                    marginTop: "4px"
                                 }}
                             >
                                 {alert.category}
@@ -72,7 +73,7 @@ export default function HttpThreatsCard({ threats }) {
                 })}
 
             </div>
-
+            )}
         </div>
     );
 }

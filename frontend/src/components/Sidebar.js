@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
     BarChart2,
     Layers,
@@ -10,6 +10,12 @@ import {
 export default function Sidebar() {
 
     const [collapsed, setCollapsed] = useState(false);
+    const location = useLocation();
+
+    const isActiveCheck = (path) => {
+        if (path === "/") return location.pathname === "/";
+        return location.pathname.startsWith(path);
+    };
 
     return (
         <div className={`sidebar ${collapsed ? "collapsed" : ""}`}>
@@ -30,22 +36,22 @@ export default function Sidebar() {
 
             <nav className="sidebar-menu">
 
-                <NavLink to="/" end className="sidebar-item">
+                <NavLink to="/" className={`sidebar-item ${isActiveCheck("/") ? "active" : ""}`}>
                     <BarChart2 size={18} />
                     {!collapsed && <span className="sidebar-text">Dashboard</span>}
                 </NavLink>
 
-                <NavLink to="/protocols" className="sidebar-item">
+                <NavLink to="/protocols" className={`sidebar-item ${isActiveCheck("/protocols") || isActiveCheck("/packet") || isActiveCheck("/protocol") ? "active" : ""}`}>
                     <Layers size={18} />
                     {!collapsed && <span className="sidebar-text">Protocols</span>}
                 </NavLink>
 
-                <NavLink to="/intelligence" className="sidebar-item">
+                <NavLink to="/intelligence" className={`sidebar-item ${isActiveCheck("/intelligence") ? "active" : ""}`}>
                     <Shield size={18} />
                     {!collapsed && <span className="sidebar-text">Intelligence</span>}
                 </NavLink>
 
-                <NavLink to="/content" className="sidebar-item">
+                <NavLink to="/content" className={`sidebar-item ${isActiveCheck("/content") ? "active" : ""}`}>
                     <FileText size={18} />
                     {!collapsed && <span className="sidebar-text">Content</span>}
                 </NavLink>
