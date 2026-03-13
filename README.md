@@ -276,6 +276,37 @@ The frontend dashboard provides:
 
 ---
 
+# Hardware Requirements
+
+To ensure stable performance when analyzing PCAP files, the following minimum and recommended hardware specifications are suggested.
+
+### Minimum Requirements
+
+- CPU: Dual Core Processor (2 GHz or higher)<br />
+- RAM: 8 GB<br />
+- Storage: 10 GB available disk space<br />
+
+### Operating System:
+- Linux (Ubuntu 20.04 or later recommended)<br />
+- macOS<br />
+- Windows with WSL2 (recommended for Docker)<br />
+- Docker Engine and Docker Compose installed
+
+### Recommended Requirements
+For analyzing larger PCAP files or running multiple analyses in parallel:
+- CPU: Quad Core Processor (3 GHz or higher)
+- RAM: 16 GB or more
+- Storage: SSD with at least 20 GB available space
+- GPU: Not required
+- Network: Internet connection for threat intelligence lookups (VirusTotal API)
+
+### Notes
+- Large PCAP files (>1 GB) may require additional memory depending on analysis complexity.
+- Running Suricata IDS and the analysis engine simultaneously may increase CPU utilization.
+- SSD storage is recommended for faster packet parsing and analysis operations.
+
+---
+
 # Installation Instructions
 
 ## 1 Clone the Repository
