@@ -13,12 +13,13 @@ This system was developed as part of a cybersecurity research and industry colla
 - Project Structure
 - Features
 - Technologies Used
+- Hardware Requirements
 - Installation Instructions
 - Docker Deployment
 - Running the Application
 - Threat Detection Pipeline
-- Suricata Integration
-- GeoIP Integration
+- GeoIP & Intelligence Integration
+- VirusTotal API Configuration
 
 ---
 
@@ -43,86 +44,77 @@ The platform provides the following capabilities:
 
 # System Architecture
 
-The system follows a layered architecture that separates data ingestion, analysis, detection, intelligence enrichment, and visualization.
+The PCAP Analysis System follows a modular, layer-based architecture designed for high-throughput packet processing and deep intelligence enrichment.
 
-```
-Input Layer
-------------------------------
-PCAP File Upload
-PCAP Capture Directory
-
-
-        │
-        ▼
-
-
-Analysis Controller Layer
--------------------------------------------------
-PCAP Ingestion Engine
-Packet Parsing Engine
-Chunk Splitting Module
-Workload Planning Engine
-Parallel Processing Manager
-
-
-        │
-        ▼
-
-
-Core Analysis Engine
--------------------------------------------------
-Flow Engine
-Detection Engine
-Analysis Engine
-Statistics Builder
-Traffic Analyzer
-
-
-        │
-        ▼
-
-
+```text
+Visualization Layer (React)
+--------------------------------------------------------------------------------
+Interactive Dashboard  │  Traffic Stats & Charts  │  GeoIP Map  │  Upload Gateway
+--------------------------------------------------------------------------------
+         │
+         ▼
+API & Ingestion Layer (FastAPI)
+--------------------------------------------------------------------------------
+REST API Endpoints  │  Chunked Upload Service  │  Report Export (PDF/CSV)
+--------------------------------------------------------------------------------
+         │
+         ▼
+Orchestration & Scaling Layer
+--------------------------------------------------------------------------------
+Pipeline Manager  │  Parallel Engine  │  Workload Planner  │  Chunk Splitter
+--------------------------------------------------------------------------------
+         │
+         ▼
+Analysis Core (Deep Packet Inspection)
+--------------------------------------------------------------------------------
+Flow Engine  │  HTTP Extractor  │  Credential Extractor  │  File Extractor
+--------------------------------------------------------------------------------
+         │
+         ▼
 Threat Detection & IDS Layer
--------------------------------------------------
-HTTP Threat Detection
-Suricata IDS Integration
-Domain Intelligence Engine
-
-
-        │
-        ▼
-
-
+--------------------------------------------------------------------------------
+Anomaly Detection  │  Suricata IDS Integration  │  HTTP Threat Detector
+--------------------------------------------------------------------------------
+         │
+         ▼
 Threat Intelligence Layer
--------------------------------------------------
-Domain Lookup
-Threat Intelligence Feeds
-IP Reputation Analysis
-GeoIP Mapping
-
-
-        │
-        ▼
-
-
-Data Processing Layer
--------------------------------------------------
-Temporary Processing Cache
-Shared Data Store
-Analysis Metrics
-
-
-        │
-        ▼
-
-
-Visualization Layer
--------------------------------------------------
-React Dashboard
-Network Traffic Statistics
-Threat Intelligence Panel
-GeoIP Map Visualization
+--------------------------------------------------------------------------------
+IP Reputation (VirusTotal)  │  Domain Intel  │  GeoIP Mapping (MaxMind)
+--------------------------------------------------------------------------------
+         │
+         ▼
+Data & Persistence Layer
+--------------------------------------------------------------------------------
+Shared Analysis Store  │  Processing Cache  │  User DB (SQLite)
+--------------------------------------------------------------------------------
 ```
+
+### Architectural Decomposition
+
+#### 1. Ingestion & API Layer
+The frontend provides a secure, chunked upload gateway that allows for the ingestion of multi-gigabyte PCAP files by splitting them into manageable chunks. The FastAPI backend (`port 8000`) handles these sessions asynchronously, ensuring the UI remains responsive even during heavy parsing.
+
+#### 2. Orchestration & Scaling Layer
+To handle large datasets, the system uses a **Parallel Multi-core Engine**. The `WorkloadPlanner` analyzes the system's hardware capabilities (CPU/RAM) and divides the PCAP analysis task across multiple cores. The `Pipeline` manager ensures that individual chunk results are correctly aggregated.
+
+#### 3. Core Analysis Engine (Deep Packet Inspection)
+This layer performs granular inspection of the packet data:
+*   **Flow Reconstruction:** Rebuilds TCP streams and tracks UDP conversations.
+*   **DPI Modules:** Dedicated extractors for HTTP transactions, authentication credentials, and embedded files (PDFs, EXEs, etc.).
+*   **Protocol Analysis:** Specialized analysis for DNS, UDP, and Layer 2 (MAC/OUI) characteristics.
+
+#### 4. Threat Detection & IDS
+The system combines signature-based and behavioral detection:
+*   **Suricata Integration:** Leverages the industry-standard Suricata engine (integrated within the backend container) for high-fidelity IDS alerts.
+*   **Behavioral Detection:** Custom modules for identifying suspicious HTTP patterns and protocol anomalies.
+
+#### 5. Intelligence Enrichment
+Raw data is enriched with global threat telemetry:
+*   **IP/Domain Reputation:** Real-time lookups against VirusTotal and custom domain feeds.
+*   **Geolocation:** Mapping of source/destination IPs to physical locations using MaxMind GeoLite2.
+
+#### 6. Persistence & Visualization
+Results are persisted in the `Shared Analysis Store` and served to the React dashboard. The dashboard provides interactive visualizations including protocol timelines, geographical heatmaps, and comprehensive threat reports exportable as PDF or CSV.
 
 ---
 
@@ -132,7 +124,6 @@ GeoIP Map Visualization
 pcap_analysis_system
 │
 ├── backend
-│   │
 │   ├── core
 │   │   ├── analysis_recommender.py
 │   │   ├── chunk_splitter.py
@@ -150,33 +141,23 @@ pcap_analysis_system
 │   │   ├── scaling_manager.py
 │   │   ├── udp_analysis.py
 │   │   └── workload_planner.py
-│   │
 │   ├── geoip
 │   │   └── GeoLite2-City.mmdb
-│   │
 │   ├── ids
 │   │   ├── http_threat_detector.py
 │   │   └── suricata_engine.py
-│   │
 │   ├── services
 │   │   └── threat_intel.py
-│   │
 │   ├── threat_intel
 │   │   ├── domain_engine.py
 │   │   ├── domain_lookup.py
 │   │   └── feed_manager.py
-│   │
 │   ├── utils
 │   │   ├── file_validation.py
 │   │   └── system_info.py
-│   │
-│   ├── analysis_engine.py
+│   ├── main.py
 │   ├── analyzer.py
 │   ├── geo.py
-│   ├── host_agent.py
-│   ├── main.py
-│   ├── parsing.py
-│   ├── simple_tcp_server.py
 │   ├── statistics.py
 │   ├── requirements.txt
 │   ├── Dockerfile
@@ -206,85 +187,48 @@ pcap_analysis_system
 
 # Features
 
-### PCAP Processing
+### PCAP Ingestion & Processing
+- **Large File Support:** Robust chunked upload gateway for multi-GB captures.
+- **Deep Packet Inspection (DPI):** Granular metadata extraction including Source/Dest IPs, Ports, Protocols, and Timestamps.
+- **Automated Resource Management:** Hardware profiling ensures analysis job parameters are optimized for host CPU and RAM.
 
-The system ingests PCAP files and extracts relevant packet metadata including:
+### Advanced Forensic Analysis
+- **Flow Reconstruction:** Rebuilds complete TCP streams and tracks UDP conversations.
+- **Deep DPI Extractors:** Automated extraction of HTTP transactions, credentials/auth data, and embedded files.
+- **Layer 2 Analysis:** MAC address vendor identification (OUI) and protocol layering.
 
-- Source IP
-- Destination IP
-- Ports
-- Protocol
-- Packet timestamps
-- Flow characteristics
+### Threat Detection & IDS
+- **Hybrid Detection:** Combines signature-based analysis (Suricata) with behavioral anomaly detection.
+- **Malaicious Activity Identificaiton:** Detects suspicious HTTP communications, abnormal TCP behaviors, and malicious domain interactions.
 
-### Flow Analysis
-
-TCP flows are reconstructed to detect abnormal traffic behavior.
-
-### Threat Detection
-
-The detection engine identifies suspicious patterns such as:
-
-- malicious HTTP communication
-- abnormal TCP behavior
-- suspicious domains
-
-### Threat Intelligence Enrichment
-
-External threat intelligence sources are used to enrich IP and domain information.
-
-
-### Suricata Integration
-
-The system integrates Suricata to detect known attack signatures using IDS rules.
-
-### GeoIP Mapping
-
-IP addresses are mapped to geographical locations using the MaxMind GeoLite2 database.
-
-### Dashboard Visualization
-
-The frontend dashboard provides:
-
-- network traffic statistics
-- geolocation map
-- detected threats
-- packet analysis panels
+### Intelligence & Visualization
+- **Threat Intel Enrichment:** Real-time IP reputation lookups via VirusTotal and custom domain feeds.
+- **GeoIP Heatmapping:** Interactive 3D/2D mapping of network traffic origin and destination.
+- **Comprehensive Reporting:** Automated generation of detailed PDF and CSV reports for security audits.
+- **Interactive SOC Dashboard:** Real-time visualizations powered by Three.js and ECharts.
 
 ---
 
 # Technologies Used
 
 ### Backend
-
-- Python
-- FastAPI
-- Scapy
-- TShark
+- **Python 3.11+**
+- **FastAPI:** High-performance asynchronous API framework.
+- **Scapy & TShark:** Powerful packet manipulation and dissection.
+- **Suricata:** Industry-standard IDS engine.
+- **ReportLab:** Automated PDF report generation.
+- **SQLAlchemy:** Secure data persistence and user management.
 
 ### Frontend
+- **React 19:** Modern, component-based UI.
+- **TailwindCSS v4:** High-density enterprise styling.
+- **Three.js & ECharts:** Advanced 3D visualizations and interactive charts.
+- **Lucide React:** Professional vector iconography.
 
-- React
-- JavaScript
-- CSS
-
-### Threat Detection
-
-- Suricata IDS
-
-### Containerization
-
-- Docker
-- Docker Compose
-
-### Threat Intelligence
-
-- Custom threat feed ingestion
-- Domain intelligence engine
-
-### Geolocation
-
-- MaxMind GeoLite2
+### Infrastructure & Enrichment
+- **Docker & Docker Compose:** Containerized deployment orchestration.
+- **MaxMind GeoLite2:** High-accuracy geographic mapping.
+- **VirusTotal API:** Real-time threat telemetry integration.
 
 ---
 
@@ -390,25 +334,20 @@ npm start
 
 # Docker Deployment
 
-The system can be deployed using Docker.
+The system's backend and analysis engine can be deployed using Docker.
 
-Build containers
-
-```
+**Build and Start Backend**
+```bash
 docker compose build
-```
-
-Start containers
-
-```
 docker compose up
 ```
 
-This will start:
+This will initialize:
+- **FastAPI Analysis Service** (Port 8000)
+- **Suricata IDS Engine** (Integrated within service)
+- **Shared Analysis Volume** (under `./shared_data`)
 
-- Backend analysis service
-- Suricata IDS container
-- Frontend dashboard
+*Note: The frontend is typically served separately via `npm start` for development, or a static build for production.*
 
 ---
 
@@ -416,19 +355,17 @@ This will start:
 
 After deployment:
 
-Frontend
-
+### Frontend Dashboard
+Access the interactive SOC interface:
 ```
 http://localhost:3000
 ```
 
-Backend API
-
+### Backend API (Swagger UI)
+Interact directly with the analysis endpoints:
 ```
-http://localhost:5000
+http://localhost:8000/docs
 ```
-
-Upload a PCAP file through the dashboard to begin analysis.
 
 ---
 
@@ -446,31 +383,15 @@ The detection pipeline follows these stages:
 
 ---
 
-# Suricata Integration
+# GeoIP & Intelligence Integration
 
-The platform integrates Suricata as an IDS engine.
-
-Suricata analyzes network traffic and detects attack signatures using rules.
-
-The Suricata container runs alongside the backend service and sends detection results to the analysis pipeline.
-
----
-
-# GeoIP Integration
-
-The system uses the MaxMind GeoLite2 City database to determine geographic locations of IP addresses.
-
-Download the database from:
-
-```
-https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
-```
-
-Place the file inside:
+The system uses the MaxMind GeoLite2 City database for location mapping. Ensure the database is placed in the correct directory:
 
 ```
 backend/geoip/GeoLite2-City.mmdb
 ```
+
+Download the database from [MaxMind Dev Portal](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data).
 
 ---
 
@@ -494,34 +415,10 @@ To enable VirusTotal lookups, the developer must configure an API key using an e
 
 ---
 
-## Step 2: Create Environment File
+Inside the **backend directory**, create a `.env` file and add your VirusTotal credentials:
 
-Inside the **backend directory**, create a file named:
-
-```
-.env
-```
-
-Example directory location:
-
-```
-pcap_analysis_system/backend/.env
-```
-
----
-
-## Step 3: Add the API Key
-
-Add the following line inside the `.env` file:
-
-```
-INTEL_API_KEY=<your_virustotal_api_key>
-```
-
-Example:
-
-```
-INTEL_API_KEY=abc123xxxxxxxxxxxxxxxxxxxxxxxx
+```bash
+INTEL_API_KEY=your_virustotal_api_key_here
 ```
 
 ---
