@@ -44,51 +44,6 @@ The platform provides the following capabilities:
 
 # System Architecture
 
-The PCAP Analysis System follows a modular, layer-based architecture designed for high-throughput packet processing and deep intelligence enrichment.
-
-```text
-Visualization Layer (React)
---------------------------------------------------------------------------------
-Interactive Dashboard  │  Traffic Stats & Charts  │  GeoIP Map  │  Upload Gateway
---------------------------------------------------------------------------------
-         │
-         ▼
-API & Ingestion Layer (FastAPI)
---------------------------------------------------------------------------------
-REST API Endpoints  │  Chunked Upload Service  │  Report Export (PDF/CSV)
---------------------------------------------------------------------------------
-         │
-         ▼
-Orchestration & Scaling Layer
---------------------------------------------------------------------------------
-Pipeline Manager  │  Parallel Engine  │  Workload Planner  │  Chunk Splitter
---------------------------------------------------------------------------------
-         │
-         ▼
-Analysis Core (Deep Packet Inspection)
---------------------------------------------------------------------------------
-Flow Engine  │  HTTP Extractor  │  Credential Extractor  │  File Extractor
---------------------------------------------------------------------------------
-         │
-         ▼
-Threat Detection & IDS Layer
---------------------------------------------------------------------------------
-Anomaly Detection  │  Suricata IDS Integration  │  HTTP Threat Detector
---------------------------------------------------------------------------------
-         │
-         ▼
-Threat Intelligence Layer
---------------------------------------------------------------------------------
-IP Reputation (VirusTotal)  │  Domain Intel  │  GeoIP Mapping (MaxMind)
---------------------------------------------------------------------------------
-         │
-         ▼
-Data & Persistence Layer
---------------------------------------------------------------------------------
-Shared Analysis Store  │  Processing Cache  │  User DB (SQLite)
---------------------------------------------------------------------------------
-```
-
 ### Architectural Decomposition
 
 #### 1. Ingestion & API Layer
