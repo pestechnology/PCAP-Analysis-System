@@ -136,13 +136,19 @@ pcap_analysis_system
 │   ├── core
 │   │   ├── analysis_recommender.py
 │   │   ├── chunk_splitter.py
+│   │   ├── credential_extractor.py
 │   │   ├── detection_engine.py
+│   │   ├── file_extractor.py
 │   │   ├── flow_engine.py
 │   │   ├── hardware_profiler.py
+│   │   ├── http_extractor.py
 │   │   ├── ingestion.py
+│   │   ├── layer2_analysis.py
 │   │   ├── parallel_engine.py
 │   │   ├── pipeline.py
+│   │   ├── report_builder.py
 │   │   ├── scaling_manager.py
+│   │   ├── udp_analysis.py
 │   │   └── workload_planner.py
 │   │
 │   ├── geoip
@@ -173,7 +179,9 @@ pcap_analysis_system
 │   ├── simple_tcp_server.py
 │   ├── statistics.py
 │   ├── requirements.txt
-│   └── Dockerfile
+│   ├── Dockerfile
+│   ├── .env (ignored)
+│   └── oui.txt
 │
 ├── frontend
 │
@@ -182,6 +190,9 @@ pcap_analysis_system
 ├── suricata
 │   ├── Dockerfile
 │   └── suricata.yaml
+│
+├── threat_intel
+│   └── domain_feed.txt
 │
 ├── tmp
 │

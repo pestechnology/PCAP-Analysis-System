@@ -1,25 +1,27 @@
 import React, { useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { 
     startAnalysis, 
     pollProgress, 
     fetchResult, 
-    fetchChunks, 
-    getChunkDownloadUrl,
     initUpload,
     sendChunk,
-    finalizeUpload
+    finalizeUpload,
+    splitPCAP
 } from "../api";
+import { AlertCircle, Download, CheckCircle2, Split, X } from "lucide-react";
 
 export default function Upload({ onResult, currentFilename, currentMode }) {
 
     const [file, setFile] = useState(null);
     const [mode, setMode] = useState("—");
     const [analyzing, setAnalyzing] = useState(false);
-    const [isAdvanced, setIsAdvanced] = useState(false);
-    const [chunkList, setChunkList] = useState([]);
     const [progressStage, setProgressStage] = useState("");
-    const [jobId, setJobId] = useState("");
     const [progressPct, setProgressPct] = useState(0);
+    const [showSplitModal, setShowSplitModal] = useState(false);
+    const [isSplitting, setIsSplitting] = useState(false);
+    const [splitChunks, setSplitChunks] = useState([]);
+    const [pendingFile, setPendingFile] = useState(null);
     const pollRef = useRef(null);
 
     const allowedExtensions = [
@@ -41,10 +43,7 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
         }
 
         const fileName = selected.name.toLowerCase();
-
-        const isValid = allowedExtensions.some(ext =>
-            fileName.endsWith(ext)
-        );
+        const isValid = allowedExtensions.some(ext => fileName.endsWith(ext));
 
         if (!isValid) {
             alert("Only PCAP/PCAPNG capture files are allowed.");
@@ -54,15 +53,41 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
             return;
         }
 
-        setFile(selected);
-
         const sizeMB = selected.size / (1024 * 1024);
 
-        if (sizeMB < 50) {
-            setMode("Streaming Mode");
-        } else {
-            setMode("Chunk Optimized Mode");
+        if (sizeMB > 600) {
+            setPendingFile(selected);
+            setShowSplitModal(true);
+            setSplitChunks([]);
+            e.target.value = null;
+            return;
         }
+
+        setFile(selected);
+        setMode(sizeMB < 50 ? "Streaming Mode" : "Chunk Optimized Mode");
+    };
+
+    const handleAutoSplit = async () => {
+        if (!pendingFile) return;
+        setIsSplitting(true);
+        try {
+            const result = await splitPCAP(pendingFile);
+            setSplitChunks(result.chunks || []);
+        } catch (err) {
+            console.error(err);
+            alert("Enterprise Split Engine Error: " + (err.message || "Unknown error"));
+        } finally {
+            setIsSplitting(false);
+        }
+    };
+
+    const handleChunkDownload = (chunk) => {
+        const a = document.createElement("a");
+        a.href = `http://localhost:8000/download-split/${chunk.chunk_filename}`;
+        a.download = chunk.chunk_filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     };
 
     const submit = async () => {
@@ -89,7 +114,7 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                 setProgressStage("Initializing secure chunk transfer...");
                 const { upload_id } = await initUpload(file.name);
                 
-                const chunkSize = 10 * 1024 * 1024; // 10MB chunks
+                const chunkSize = 10 * 1024 * 1024;
                 const totalChunks = Math.ceil(file.size / chunkSize);
                 
                 for (let i = 0; i < totalChunks; i++) {
@@ -103,26 +128,20 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                 }
                 
                 setProgressStage("Finalizing transfer and starting analysis...");
-                const { job_id } = await finalizeUpload(upload_id, file.name, isAdvanced);
+                const { job_id } = await finalizeUpload(upload_id, file.name, false);
                 finalJobId = job_id;
             } else {
                 setProgressStage("Uploading capture file…");
-                const { job_id } = await startAnalysis(file, isAdvanced);
+                const { job_id } = await startAnalysis(file, false);
                 finalJobId = job_id;
             }
 
-            setJobId(finalJobId);
-            setChunkList([]);
-
-            // Phase 2: poll until done
             await new Promise((resolve, reject) => {
                 pollRef.current = setInterval(async () => {
                     try {
                         const prog = await pollProgress(finalJobId);
-
                         setProgressPct(prog.percent ?? 0);
                         setProgressStage(prog.current_stage ?? "Analyzing…");
-
                         if (prog.status === "done") {
                             clearInterval(pollRef.current);
                             resolve();
@@ -137,21 +156,11 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                 }, 1000);
             });
 
-            // Phase 3: fetch result
             setProgressPct(99);
             setProgressStage("Loading results…");
             const result = await fetchResult(finalJobId);
 
             if (!result) throw new Error("Result not ready");
-
-            if (isAdvanced) {
-                try {
-                    const { chunks } = await fetchChunks(finalJobId);
-                    setChunkList(chunks || []);
-                } catch (e) {
-                    console.warn("Could not fetch chunks:", e);
-                }
-            }
 
             onResult({
                 ...result,
@@ -160,7 +169,7 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
             });
 
         } catch (err) {
-            console.error("Analysis failed:", err);
+            console.error(err);
             alert(`Analysis failed: ${err.message || "Backend not reachable."}`);
         } finally {
             setAnalyzing(false);
@@ -173,18 +182,171 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
     return (
         <div className="upload-wrapper" style={{ position: "relative" }}>
 
+            {showSplitModal && createPortal(
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(5, 10, 20, 0.9)',
+                    backdropFilter: 'blur(10px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9999,
+                    padding: '24px'
+                }}>
+                    <div style={{
+                        maxWidth: '550px',
+                        width: '100%',
+                        background: '#0B111D',
+                        border: '1px solid var(--accent-orange, #FF9900)',
+                        borderRadius: '20px',
+                        padding: '40px',
+                        boxShadow: '0 30px 60px rgba(0,0,0,0.8), 0 0 20px rgba(255, 153, 0, 0.1)',
+                        position: 'relative'
+                    }}>
+                        <button 
+                            onClick={() => { setShowSplitModal(false); setPendingFile(null); }}
+                            style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                            <div style={{ background: 'rgba(255, 153, 0, 0.1)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px' }}>
+                                <AlertCircle size={32} color="var(--accent-orange)" />
+                            </div>
+                            <div>
+                                <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Payload Limit Exceeded</h2>
+                                <p style={{ fontSize: '13px', color: 'var(--accent-orange)', margin: '4px 0 0', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>Enterprise Safety Gateway</p>
+                            </div>
+                        </div>
+
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '15px', lineHeight: 1.6, marginBottom: '32px' }}>
+                            The file <strong style={{ color: 'var(--text-primary)' }}>{pendingFile?.name}</strong> is <strong>{(pendingFile?.size / (1024 * 1024)).toFixed(1)} MB</strong>, which exceeds the 600MB analysis threshold. To ensure packet integrity and deep inspection stability, please choose an action:
+                        </p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {splitChunks.length === 0 ? (
+                                <>
+                                    <button 
+                                        onClick={handleAutoSplit}
+                                        disabled={isSplitting}
+                                        style={{
+                                            padding: '18px 24px',
+                                            background: 'linear-gradient(90deg, #FF9900, #FF6600)',
+                                            border: 'none',
+                                            borderRadius: '12px',
+                                            color: 'white',
+                                            fontWeight: 700,
+                                            fontSize: '15px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '12px',
+                                            transition: 'transform 0.2s',
+                                            opacity: isSplitting ? 0.7 : 1
+                                        }}
+                                        onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                        onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                    >
+                                        {isSplitting ? (
+                                            <>Processing Partitioning...</>
+                                        ) : (
+                                            <>
+                                                <Split size={20} />
+                                                Automated Partitioning (Split for me)
+                                            </>
+                                        )}
+                                    </button>
+
+                                    <button 
+                                        onClick={() => { setShowSplitModal(false); setPendingFile(null); }}
+                                        style={{
+                                            padding: '18px 24px',
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: '12px',
+                                            color: 'var(--text-secondary)',
+                                            fontWeight: 600,
+                                            fontSize: '15px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                                        onMouseOut={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                    >
+                                        I will split it myself manually
+                                    </button>
+                                </>
+                            ) : (
+                                <div style={{ background: 'rgba(0, 255, 102, 0.05)', border: '1px solid rgba(0, 255, 102, 0.2)', borderRadius: '16px', padding: '24px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', color: 'var(--accent-green)' }}>
+                                        <CheckCircle2 size={20} />
+                                        <span style={{ fontWeight: 700, fontSize: '15px' }}>Partitioning Complete</span>
+                                    </div>
+                                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                                        Your capture has been split optimally without packet tampering. Download the chunks below and re-upload them separately for analysis.
+                                    </p>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {splitChunks.map((chunk, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => handleChunkDownload(chunk)}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    padding: '12px 16px',
+                                                    background: 'rgba(0,0,0,0.3)',
+                                                    border: '1px solid rgba(255,255,255,0.1)',
+                                                    borderRadius: '8px',
+                                                    color: 'var(--text-primary)',
+                                                    fontSize: '13px',
+                                                    fontWeight: 500,
+                                                    cursor: 'pointer',
+                                                    width: '100%',
+                                                    textAlign: 'left'
+                                                }}
+                                            >
+                                                <span>{chunk.chunk_filename}</span>
+                                                <Download size={16} color="var(--accent-cyan)" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button 
+                                        onClick={() => { setShowSplitModal(false); setPendingFile(null); setSplitChunks([]); }}
+                                        style={{ 
+                                            marginTop: '20px', 
+                                            width: '100%', 
+                                            padding: '12px', 
+                                            background: 'var(--accent-blue)', 
+                                            border: 'none', 
+                                            borderRadius: '8px', 
+                                            color: 'white', 
+                                            fontWeight: 600, 
+                                            cursor: 'pointer' 
+                                        }}
+                                    >
+                                        Acknowledge & Close
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
             {analyzing && (
                 <div className="loader-overlay">
                     <div className="loader-spinner"></div>
-                    
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                         <p style={{ fontWeight: "600", fontSize: "14px" }}>{progressStage}</p>
                         <p style={{ fontSize: "12px", color: "var(--text-muted)", opacity: 0.8 }}>
                             Processing Status: <span style={{ color: "var(--accent-cyan)", fontWeight: "bold" }}>{progressPct}%</span>
                         </p>
                     </div>
-
-                    {/* Real-time progress bar */}
                     <div style={{
                         width: "300px",
                         height: "6px",
@@ -204,8 +366,14 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                 </div>
             )}
 
-            <div className="upload-container" style={{ gap: '24px', minHeight: '60px' }}>
-
+            <div className="upload-container" style={{ 
+                gap: '16px', 
+                minHeight: '60px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%'
+            }}>
                 <label className="file-upload">
                     <input
                         type="file"
@@ -215,8 +383,9 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                     />
                     <span className="upload-button" style={{ 
                         opacity: analyzing ? 0.5 : 1,
-                        padding: '12px 24px',
-                        fontSize: '14px'
+                        padding: '10px 20px',
+                        fontSize: '13px',
+                        whiteSpace: 'nowrap'
                     }}>
                         Upload PCAP
                     </span>
@@ -228,11 +397,16 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                     style={{ 
                         flex: 1, 
                         fontSize: '13px', 
-                        color: file ? 'var(--text-primary)' : 'var(--text-muted)',
-                        maxWidth: '300px'
+                        color: file ? 'var(--text-primary)' : 'rgba(255,255,255,0.4)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        margin: '0 12px',
+                        textAlign: 'center',
+                        fontStyle: file ? 'normal' : 'italic'
                     }}
                 >
-                    {file ? file.name : (currentFilename || "Select a capture file...")}
+                    {file ? file.name : (currentFilename || "No file selected. Please choose a capture.")}
                 </div>
 
                 <button
@@ -240,20 +414,38 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                     onClick={submit}
                     disabled={analyzing}
                     style={{ 
-                        padding: '12px 32px',
+                        padding: '10px 24px',
                         borderRadius: '8px',
-                        fontSize: '14px',
-                        fontWeight: '600'
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap'
                     }}
                 >
                     {analyzing ? "Analyzing..." : "Analyze"}
                 </button>
-
             </div>
+
+            {!file && !currentFilename && (
+                <div style={{ marginTop: '4px', textAlign: 'center' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', opacity: 0.8 }}>
+                        Not sure how to capture a PCAP?{' '}
+                        <a 
+                            href="#capture-guide" 
+                            style={{ 
+                                color: 'var(--accent-cyan)', 
+                                textDecoration: 'underline',
+                                cursor: 'pointer',
+                                fontWeight: 500
+                            }}
+                        >
+                            Click here to view our guide
+                        </a>
+                    </p>
+                </div>
+            )}
 
             <div className="analysis-mode" style={{ marginTop: '20px', padding: '0 4px' }}>
                 <span className="mode-label" style={{ fontSize: '12px', opacity: 0.7 }}>Recommended Engine:</span>
-
                 <span
                     className={`mode-pill ${
                         (file ? mode : currentMode) === "Streaming Mode"
@@ -265,60 +457,7 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                 >
                     {file ? mode : (currentMode || "—")}
                 </span>
-
-                <label style={{ 
-                    display: "flex", 
-                    alignItems: "center", 
-                    gap: "6px", 
-                    fontSize: "11px", 
-                    color: "var(--text-muted, #8e8e93)",
-                    cursor: "pointer",
-                    marginLeft: "auto"
-                }}>
-                    <input 
-                        type="checkbox" 
-                        checked={isAdvanced}
-                        onChange={(e) => setIsAdvanced(e.target.checked)}
-                        style={{ accentColor: "var(--accent-blue)" }}
-                    />
-                    Advanced Mode (Split Chunks)
-                </label>
             </div>
-
-            {chunkList.length > 0 && (
-                <div style={{ 
-                    marginTop: "16px", 
-                    padding: "12px", 
-                    background: "rgba(255,255,255,0.03)", 
-                    borderRadius: "8px",
-                    border: "1px solid var(--border-subtle)"
-                }}>
-                    <p style={{ fontSize: "12px", marginBottom: "8px", color: "var(--text-primary)" }}>
-                        Generated PCAP Chunks (Advanced Mode):
-                    </p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                        {chunkList.map((c, i) => (
-                            <a 
-                                key={i} 
-                                href={getChunkDownloadUrl(jobId, c)} 
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{
-                                    fontSize: "11px",
-                                    padding: "4px 8px",
-                                    background: "var(--bg-panel)",
-                                    border: "1px solid var(--border-subtle)",
-                                    borderRadius: "4px",
-                                    color: "var(--accent-blue)",
-                                    textDecoration: "none"
-                                }}
-                            >
-                                Chunk {i + 1}
-                            </a>
-                        ))}
-                    </div>
-                </div>
-            )}
 
         </div>
     );
