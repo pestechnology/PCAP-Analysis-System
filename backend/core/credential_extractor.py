@@ -3,23 +3,14 @@ import os
 import re
 
 def extract_credentials(file_path):
-    """
-    Extracts credentials using a highly optimized dual-layer approach.
-    Pass 1: tshark -z credentials (handles stateful FTP, POP, IMAP, SMTP, HTTP, Telnet)
-    Pass 2: tshark -T fields (handles complex hashes like NTLM, Kerberos, Postgres, LDAP, MSSQL, SIP, SNMP)
-    """
     results = []
 
-    # ==========================================
-    # PASS 1: Stateful Extraction (-z credentials)
-    # ==========================================
     cmd_z = ["tshark", "-r", file_path, "-q", "-z", "credentials"]
     try:
         out_z = subprocess.run(cmd_z, capture_output=True, text=True, timeout=180)
         lines = out_z.stdout.splitlines()
         
         creds_z = []
-        packet_nums = []
         parsing = False
         
         for line in lines:
@@ -29,8 +20,7 @@ def extract_credentials(file_path):
             if parsing and line.startswith("======"):
                 break
             if parsing and line.strip():
-                # Format: Packet     Protocol         Username         Info
-                parts = re.split(r'\s{2,}', line.strip(), maxsplit=3)
+                parts = re.split(r'\s+', line.strip(), maxsplit=3)
                 if len(parts) >= 3:
                     packet_num = parts[0]
                     protocol = parts[1]
@@ -42,13 +32,12 @@ def extract_credentials(file_path):
                             "packet": packet_num,
                             "protocol": protocol,
                             "username": username,
-                            "password_snippet": info
+                            "info": info
                         })
-                        packet_nums.append(packet_num)
         
-        if packet_nums:
+        if creds_z:
+            packet_nums = [c["packet"] for c in creds_z]
             filter_str = " || ".join([f"frame.number=={num}" for num in packet_nums])
-            # Safety fallback if too many credentials exist to avoid argument list too long
             if len(packet_nums) > 100:
                 filter_str = "ftp or http or pop or imap or smtp or telnet"
                 
@@ -57,114 +46,100 @@ def extract_credentials(file_path):
                 "-Y", filter_str,
                 "-T", "fields",
                 "-E", "separator=|",
-                "-e", "frame.number",
-                "-e", "ip.src",
-                "-e", "ip.dst"
+                "-e", "frame.number", "-e", "ip.src", "-e", "ip.dst", "-e", "tcp.stream", "-e", "udp.stream"
             ]
             ip_out = subprocess.run(ip_cmd, capture_output=True, text=True, timeout=60)
             
-            ip_map = {}
+            p_map = {}
             for line in ip_out.stdout.splitlines():
                 parts = line.strip().split("|")
-                if len(parts) >= 3:
-                    frame, src, dst = parts[0], parts[1], parts[2]
-                    if frame:
-                        ip_map[frame] = {"src": src, "dst": dst}
+                if len(parts) >= 5:
+                    frame, src, dst, ts, us = parts[0], parts[1], parts[2], parts[3], parts[4]
+                    if frame: p_map[frame] = {"src": src, "dst": dst, "stream": ts or us or "0"}
                         
             for c in creds_z:
                 frame = c["packet"]
-                ips = ip_map.get(frame, {"src": "Unknown", "dst": "Unknown"})
+                meta = p_map.get(frame, {"src": "Unknown", "dst": "Unknown", "stream": "0"})
                 
-                pwd_snippet = c.get("password_snippet", "")
-                pwd_str = str(pwd_snippet) if pwd_snippet else ""
-                masked_pwd = pwd_str[:2] + "****" if len(pwd_str) > 2 else (pwd_str if pwd_str else "****")
+                raw_usr = c["username"]
+                raw_info = str(c.get("info", ""))
                 
+                clean_pwd = re.sub(r'^(Password|Pass):\s*', '', raw_info, flags=re.I)
+                clean_pwd = re.sub(r'Username in packet:\s*\d+', '', clean_pwd, flags=re.I).strip()
+                
+                clean_usr = re.sub(r'Username in packet:\s*\d+', '', raw_usr, flags=re.I).strip()
+                clean_usr = re.sub(r'^Username:\s*', '', clean_usr, flags=re.I)
+
                 results.append({
                     "protocol": c["protocol"].upper(),
-                    "client": ips["src"],
-                    "server": ips["dst"],
-                    "username": c["username"],
-                    "password_snippet": masked_pwd
+                    "client": meta["src"],
+                    "server": meta["dst"],
+                    "stream": meta["stream"],
+                    "username": clean_usr if clean_usr else "Unknown",
+                    "password_snippet": clean_pwd if clean_pwd else "N/A"
                 })
-    except Exception as e:
-        print("Pass 1 extraction failed:", e)
+    except:
+        pass
 
-    # ==========================================
-    # PASS 2: Complex Hash Fields Extraction
-    # ==========================================
     cmd_f = [
         "tshark", "-r", file_path,
-        "-Y", "ntlmssp.auth.username || pgsql.password || ldap.name || kerberos.name_string || tds.login.user_name || snmp.community || sip.auth.username",
+        "-Y", "ntlmssp.auth.username || pgsql.password || ldap.name || kerberos.name_string || tds.login.user_name || snmp.community || sip.auth.username || ftp.user || ftp.pass || http.authorization || imap.user || imap.pass || smtp.auth.username || smtp.auth.password || ftp.request.command || ftp.request.arg",
         "-T", "fields",
         "-E", "separator=|",
-        "-e", "ip.src",
-        "-e", "ip.dst",
-        "-e", "ntlmssp.auth.username",
-        "-e", "ntlmssp.auth.domain",
-        "-e", "pgsql.user",
-        "-e", "pgsql.password",
-        "-e", "ldap.name",
-        "-e", "kerberos.name_string",
-        "-e", "tds.login.user_name",
-        "-e", "snmp.community",
-        "-e", "sip.auth.username"
+        "-e", "ip.src", "-e", "ip.dst", "-e", "tcp.stream", "-e", "udp.stream",
+        "-e", "ntlmssp.auth.username", "-e", "ntlmssp.auth.domain",
+        "-e", "pgsql.user", "-e", "pgsql.password",
+        "-e", "ldap.name", "-e", "kerberos.name_string",
+        "-e", "tds.login.user_name", "-e", "snmp.community",
+        "-e", "sip.auth.username", "-e", "ftp.user", "-e", "ftp.pass",
+        "-e", "http.authorization", "-e", "imap.user", "-e", "imap.pass",
+        "-e", "smtp.auth.username", "-e", "smtp.auth.password",
+        "-e", "ftp.request.command", "-e", "ftp.request.arg"
     ]
     try:
         out_f = subprocess.run(cmd_f, capture_output=True, text=True, timeout=120)
-        
         for line in out_f.stdout.splitlines():
             parts = line.strip().split("|")
-            if len(parts) < 11:
-                parts.extend([""] * (11 - len(parts)))
+            while len(parts) < 23: parts.append("")
+            src, dst, stream = parts[0], parts[1], (parts[2] or parts[3] or "0")
             
-            src, dst = parts[0], parts[1]
-            ntlm_user, ntlm_domain = parts[2], parts[3]
-            pg_user, pg_pass = parts[4], parts[5]
-            ldap_name = parts[6]
-            krb_name = parts[7]
-            tds_user = parts[8]
-            snmp_comm = parts[9]
-            sip_user = parts[10]
-            
-            def add_cred(proto: str, user: str, pwd_raw: str):
-                if user or pwd_raw:
-                    pwd_s = str(pwd_raw) if pwd_raw else ""
-                    masked_pwd = pwd_s[:2] + "****" if len(pwd_s) > 2 else (pwd_s if pwd_s else "****")
+            def add_f(proto, user, pwd):
+                if user or pwd:
                     results.append({
-                        "protocol": proto,
-                        "client": src,
-                        "server": dst,
-                        "username": user or "Unknown",
-                        "password_snippet": masked_pwd
+                        "protocol": proto, "client": src, "server": dst, "stream": stream,
+                        "username": user or "Unknown", "password_snippet": str(pwd) if pwd else "N/A"
                     })
+            if parts[4]: add_f("SMB", parts[4], f"Domain: {parts[5]}" if parts[5] else "Hash")
+            if parts[6] or parts[7]: add_f("PostgreSQL", parts[6], parts[7])
+            if parts[8]: add_f("LDAP", parts[8], "Auth Req")
+            if parts[9]: add_f("Kerberos", parts[9], "Ticket")
+            if parts[10]: add_f("MSSQL", parts[10], "Login")
+            if parts[11]: add_f("SNMP", "public", parts[11])
+            if parts[12]: add_f("SIP", parts[12], "Digest")
+            if parts[13] or parts[14]: add_f("FTP", parts[13], parts[14])
+            if parts[15]: add_f("HTTP", "Authorized", parts[15])
+            if parts[16] or parts[17]: add_f("IMAP", parts[16], parts[17])
+            if parts[18] or parts[19]: add_f("SMTP", parts[18], parts[19])
             
-            if ntlm_user:
-                add_cred("SMB/HTTP (NTLM)", ntlm_user, f"Domain: {ntlm_domain}" if ntlm_domain else "NTLM Hash")
-            if pg_user or pg_pass:
-                add_cred("PostgreSQL", pg_user, pg_pass)
-            if ldap_name:
-                add_cred("LDAP", ldap_name, "SASL/Simple Auth")
-            if krb_name:
-                add_cred("Kerberos", krb_name, "AS-REQ Ticket")
-            if tds_user:
-                add_cred("MSSQL (TDS)", tds_user, "TDS Login")
-            if snmp_comm:
-                add_cred("SNMP", "public", f"Community: {snmp_comm}")
-            if sip_user:
-                add_cred("SIP", sip_user, "Digest Auth")
-                
-    except Exception as e:
-        print("Pass 2 extraction failed:", e)
+            f_cmd, f_arg = parts[20].upper(), parts[21]
+            if f_cmd == "USER": add_f("FTP", f_arg, "N/A")
+            elif f_cmd == "PASS": add_f("FTP", "Unknown", f_arg)
+    except:
+        pass
 
-    # ==========================================
-    # DEDUPLICATION
-    # ==========================================
-    unique_creds = []
-    seen = set()
+    merged = {}
     for c in results:
-        key = (c["protocol"], c["client"], c["server"], c["username"])
-        if key not in seen:
-            seen.add(key)
-            unique_creds.append(c)
+        key = (c["protocol"], c["stream"])
+        if key not in merged:
+            merged[key] = c
+        else:
+            m = merged[key]
+            if c["username"] != "Unknown" and m["username"] == "Unknown":
+                m["username"] = c["username"]
+            if c["password_snippet"] != "N/A" and m["password_snippet"] == "N/A":
+                m["password_snippet"] = c["password_snippet"]
             
-    return unique_creds
+            if m["client"] == "Unknown" and c["client"] != "Unknown":
+                m["client"], m["server"] = c["client"], c["server"]
+    
+    return [v for v in merged.values()]
