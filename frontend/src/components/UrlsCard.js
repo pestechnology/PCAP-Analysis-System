@@ -1,9 +1,13 @@
 import React from "react";
+import { Link } from "lucide-react";
 
 export default function UrlsCard({ urls = [] }) {
     return (
         <div className="card mac-card">
-            <div className="card-title">Extracted URLs</div>
+            <div className="card-title" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, paddingBottom: "14px", borderBottom: "1px solid var(--border-subtle)", marginBottom: "16px" }}>
+                <Link size={16} color="var(--accent-purple)" style={{ marginTop: "-2px" }} />
+                <span style={{ fontSize: "13px", letterSpacing: "1px", lineHeight: 1 }}>EXTRACTED URLS</span>
+            </div>
 
             {urls.length === 0 ? (
                 <div className="muted">No HTTP URLs extracted</div>
@@ -28,12 +32,11 @@ export default function UrlsCard({ urls = [] }) {
                         {urls.map((url, index) => (
                             <li
                                 key={index}
+                                className="scroll-item"
                                 style={{
-                                    padding: "10px 0",
-                                    borderBottom:
-                                        "1px solid rgba(255,255,255,0.05)",
-                                    fontSize: "14px",
-                                    wordBreak: "break-all"
+                                    wordBreak: "break-all",
+                                    color: "var(--text-secondary)",
+                                    fontFamily: "var(--font-mono)"
                                 }}
                             >
                                 {url}

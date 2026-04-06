@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
+import { Siren } from "lucide-react";
 import IPCard from "../components/IPCard";
 import CountryTrafficCard from "../components/CountryTrafficCard";
 import IPChart from "../components/IPChart";
 import GeoGlobeCinematic from "../components/GeoGlobeCinematic";
 import TLSMetadataCard from "../components/TLSMetadataCard";
 import "../index.css";
+import UDPAnalysisCard from "../components/UDPAnalysisCard";
+
 /* ================================
-   Helper: IP Classification
+   IP Classification
 ================================ */
 function classifyIP(ip) {
     const parts = ip.split(".").map(Number);
@@ -25,9 +28,9 @@ function classifyIP(ip) {
    Suricata Severity Mapping
 ================================ */
 function mapSuricataSeverity(sev) {
-    if (sev === 1) return { label: "High", color: "#ff4d4f" };
-    if (sev === 2) return { label: "Medium", color: "#ffa940" };
-    return { label: "Low", color: "#52c41a" };
+    if (sev === 1) return { label: "High", color: "var(--accent-red)", className: "pulse-critical" };
+    if (sev === 2) return { label: "Medium", color: "var(--accent-orange)", className: "" };
+    return { label: "Low", color: "var(--accent-green)", className: "" };
 }
 
 export default function Intelligence({ data }) {
@@ -98,14 +101,9 @@ export default function Intelligence({ data }) {
                                 gap: "12px"
                             }}
                         >
-                            <div
-                                style={{
-                                    fontSize: "20px",
-                                    fontWeight: 600,
-                                    lineHeight: "24px"
-                                }}
-                            >
-                                IDS Alerts (Engine: Suricata)
+                            <div className="card-title" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
+                                <Siren size={18} color="var(--accent-red)" style={{ marginTop: "-2px" }} />
+                                <span style={{ fontSize: "14px", letterSpacing: "1px", lineHeight: 1 }}>SURICATA IDS ALERTS</span>
                             </div>
 
                             {/* Info Icon */}
@@ -150,7 +148,7 @@ export default function Intelligence({ data }) {
                                         top: "32px",
                                         left: "0",
                                         width: "360px",
-                                        background: "#1f1f1f",
+                                        background: "var(--bg-secondary)",
                                         padding: "16px",
                                         borderRadius: "10px",
                                         fontSize: "13px",
@@ -181,9 +179,9 @@ export default function Intelligence({ data }) {
                             style={{
                                 padding: "6px 10px",
                                 borderRadius: "6px",
-                                background: "#2c2c2e",
-                                color: "#fff",
-                                border: "1px solid #444"
+                                background: "var(--bg-secondary)",
+                                color: "var(--text-primary)",
+                                border: "1px solid var(--border-subtle)"
                             }}
                         >
                             <option value="All">All</option>
@@ -198,7 +196,9 @@ export default function Intelligence({ data }) {
                             <thead style={{
                                 position: "sticky",
                                 top: 0,
-                                background: "#2c2c2e"
+                                zIndex: 10,
+                                background: "var(--bg-secondary)",
+                                borderBottom: "1px solid var(--border-subtle)"
                             }}>
                             <tr>
                                 <th style={thStyle}>Source IP</th>
@@ -211,13 +211,24 @@ export default function Intelligence({ data }) {
                             </thead>
 
                             <tbody>
-                            {abnormalData
-                                .filter(item => {
+                            {(() => {
+                                const filteredData = abnormalData.filter(item => {
                                     if (severityFilter === "All") return true;
                                     const sev = mapSuricataSeverity(item.highest_severity).label;
                                     return sev === severityFilter;
-                                })
-                                .map((item, i) => {
+                                });
+
+                                if (filteredData.length === 0) {
+                                    return (
+                                        <tr>
+                                            <td colSpan="6" style={{ padding: "30px", textAlign: "center", color: "var(--text-secondary)" }}>
+                                                {abnormalData.length === 0 ? "No IDS alerts detected in this capture." : "No IDS alerts match the selected severity."}
+                                            </td>
+                                        </tr>
+                                    );
+                                }
+
+                                return filteredData.map((item, i) => {
 
                                     const sevObj = mapSuricataSeverity(item.highest_severity);
 
@@ -226,25 +237,24 @@ export default function Intelligence({ data }) {
                                         .filter(Boolean)
                                         .sort((a, b) => new Date(a) - new Date(b));
 
-                                    const firstSeen = timestamps.length ? timestamps[0] : "-";
-                                    const lastSeen = timestamps.length ? timestamps[timestamps.length - 1] : "-";
+                                    const formatDate = (isoStr) => {
+                                        if (!isoStr || isoStr === "-") return "-";
+                                        const date = new Date(isoStr);
+                                        return date.toLocaleString();
+                                    };
+
+                                    const firstSeen = timestamps.length ? formatDate(timestamps[0]) : "-";
+                                    const lastSeen = timestamps.length ? formatDate(timestamps[timestamps.length - 1]) : "-";
 
                                     return (
                                         <>
                                             <tr
                                                 key={i}
-                                                className="ids-scroll"
+                                                className="ids-scroll ids-row-hover"
                                                 style={{
                                                     borderBottom: "1px solid rgba(255,255,255,0.05)",
-                                                    cursor: "pointer",
-                                                    transition: "background 0.2s ease"
+                                                    cursor: "pointer"
                                                 }}
-                                                onMouseEnter={(e) =>
-                                                    e.currentTarget.style.background = "rgba(255,255,255,0.03)"
-                                                }
-                                                onMouseLeave={(e) =>
-                                                    e.currentTarget.style.background = "transparent"
-                                                }
                                                 onClick={() =>
                                                     setExpandedIP(expandedIP === item.ip ? null : item.ip)
                                                 }
@@ -255,7 +265,7 @@ export default function Intelligence({ data }) {
                                                     ...tdStyle,
                                                     color: sevObj.color,
                                                     fontWeight: 600
-                                                }}>
+                                                }} className={sevObj.className}>
                                                     {sevObj.label}
                                                 </td>
 
@@ -273,7 +283,7 @@ export default function Intelligence({ data }) {
                                                     <td colSpan="6" style={{ padding: 0 }}>
                                                         <div
                                                             style={{
-                                                                background: "#161616",
+                                                                background: "var(--bg-panel)",
                                                                 maxHeight: "320px",
                                                                 overflowY: "scroll",
                                                                 padding: "18px",
@@ -286,10 +296,11 @@ export default function Intelligence({ data }) {
                                                                 return (
                                                                     <div
                                                                         key={idx}
+                                                                        className="ids-detail-hover"
                                                                         style={{
-                                                                            marginBottom: "18px",
-                                                                            paddingBottom: "14px",
-                                                                            borderBottom: "1px solid rgba(255,255,255,0.05)"
+                                                                            marginBottom: "12px",
+                                                                            padding: "12px",
+                                                                            borderBottom: idx !== item.alerts.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none"
                                                                         }}
                                                                     >
                                                                         <div
@@ -315,7 +326,7 @@ export default function Intelligence({ data }) {
                                                                         </div>
 
                                                                         <div style={{ fontSize: "12px", opacity: 0.85 }}>
-                                                                            Timestamp: {alert.timestamp || "-"}
+                                                                            Timestamp: {alert.timestamp ? new Date(alert.timestamp).toLocaleString() : "-"}
                                                                         </div>
 
                                                                         <div style={{ fontSize: "12px", opacity: 0.85 }}>
@@ -342,19 +353,8 @@ export default function Intelligence({ data }) {
                                             )}
                                         </>
                                     );
-                                })}
-
-                            {abnormalData.length === 0 && (
-                                <tr>
-                                    <td colSpan="6" style={{
-                                        padding: "30px",
-                                        textAlign: "center",
-                                        opacity: 0.6
-                                    }}>
-                                        No IDS alerts detected in this capture.
-                                    </td>
-                                </tr>
-                            )}
+                                });
+                            })()}
                             </tbody>
                         </table>
                     </div>
@@ -362,10 +362,20 @@ export default function Intelligence({ data }) {
             </div>
 
             {/* ================================
+            UDP Threat Analysis
+            ================================ */}
+            {data?.udp_analysis && (
+                <div className="section-group">
+                    <UDPAnalysisCard data={data.udp_analysis} />
+                </div>
+            )}
+
+            {/* ================================
             Suspicious Domain Detection
             ================================ */}
-            <div className="section-group">
-                <div className="card">
+            {(data?.domain_threat_alerts || []).length > 0 && (
+                <div className="section-group">
+                    <div className="card">
 
                     <div style={{
                         display: "flex",
@@ -398,7 +408,9 @@ export default function Intelligence({ data }) {
                             <thead style={{
                                 position: "sticky",
                                 top: 0,
-                                background: "#2c2c2e"
+                                zIndex: 10,
+                                background: "var(--bg-secondary)",
+                                borderBottom: "1px solid var(--border-subtle)"
                             }}>
                             <tr>
                                 <th style={thStyle}>Domain</th>
@@ -413,7 +425,7 @@ export default function Intelligence({ data }) {
                                     <td colSpan="3" style={{
                                         padding: "30px",
                                         textAlign: "center",
-                                        opacity: 0.6
+                                        color: "var(--text-secondary)"
                                     }}>
                                         No malicious domains detected in this capture.
                                     </td>
@@ -421,24 +433,17 @@ export default function Intelligence({ data }) {
                             ) : (
                                 data.domain_threat_alerts.map((item, index) => {
 
-                                    const color =
-                                        item.classification === "malicious"
-                                            ? "#ff4d4f"
-                                            : "#ffa940";
+                                    const isMalicious = item.classification === "malicious";
+                                    const color = isMalicious ? "var(--accent-red)" : "var(--accent-orange)";
+                                    const pulseClass = isMalicious ? "pulse-critical" : "";
 
                                     return (
                                         <tr
                                             key={index}
+                                            className="ids-row-hover"
                                             style={{
-                                                borderBottom: "1px solid rgba(255,255,255,0.05)",
-                                                transition: "background 0.2s ease"
+                                                borderBottom: "1px solid rgba(255,255,255,0.05)"
                                             }}
-                                            onMouseEnter={(e) =>
-                                                e.currentTarget.style.background = "rgba(255,255,255,0.03)"
-                                            }
-                                            onMouseLeave={(e) =>
-                                                e.currentTarget.style.background = "transparent"
-                                            }
                                         >
                                             <td style={tdStyle}>{item.domain}</td>
 
@@ -448,7 +453,7 @@ export default function Intelligence({ data }) {
                                                 ...tdStyle,
                                                 color: color,
                                                 fontWeight: 600
-                                            }}>
+                                            }} className={pulseClass}>
                                                 {item.classification.toUpperCase()}
                                             </td>
                                         </tr>
@@ -460,6 +465,7 @@ export default function Intelligence({ data }) {
                     </div>
                 </div>
             </div>
+            )}
 
             <h2 className="section-heading">Top Talkers</h2>
 

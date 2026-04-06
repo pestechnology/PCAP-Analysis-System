@@ -1,9 +1,9 @@
 .App {
   min-height: 100vh;
-  background: radial-gradient(1200px 600px at 20% 0%, rgba(99, 102, 241, 0.12), transparent),
-    radial-gradient(1000px 500px at 80% 20%, rgba(16, 185, 129, 0.10), transparent),
-    #0b1020;
-  color: #e7e9ee;
+  background: radial-gradient(1200px 600px at 20% 0%, rgba(178, 0, 255, 0.08), transparent),
+    radial-gradient(1000px 500px at 80% 20%, rgba(0, 240, 255, 0.05), transparent),
+    var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .container {
@@ -25,21 +25,28 @@
   font-weight: 700;
   letter-spacing: 0.2px;
   margin: 0;
+  font-family: var(--font-heading);
 }
 
 .subtitle {
   margin: 6px 0 0;
   font-size: 13px;
-  color: rgba(231, 233, 238, 0.72);
+  color: var(--text-secondary);
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
 }
 
 .row {
@@ -70,20 +77,27 @@
 
 .kpi {
   padding: 12px 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  transition: background 0.2s;
+}
+
+.kpi.hover {
+  background: var(--bg-panel-hover);
 }
 
 .kpiLabel {
   font-size: 12px;
-  color: rgba(231, 233, 238, 0.72);
+  color: var(--text-secondary);
 }
 
 .kpiValue {
   margin-top: 6px;
   font-size: 18px;
   font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
 }
 
 .badge {
@@ -91,22 +105,30 @@
   align-items: center;
   border-radius: 999px;
   padding: 4px 10px;
-  font-size: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: var(--font-mono);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
 }
 
 .badge.legit {
-  border-color: rgba(16, 185, 129, 0.35);
-  background: rgba(16, 185, 129, 0.12);
+  color: var(--accent-green);
+  border-color: rgba(0, 255, 102, 0.3);
+  background: rgba(0, 255, 102, 0.1);
 }
 .badge.suspicious {
-  border-color: rgba(245, 158, 11, 0.45);
-  background: rgba(245, 158, 11, 0.12);
+  color: var(--accent-orange);
+  border-color: rgba(255, 153, 0, 0.3);
+  background: rgba(255, 153, 0, 0.1);
 }
 .badge.spoofed {
-  border-color: rgba(239, 68, 68, 0.45);
-  background: rgba(239, 68, 68, 0.12);
+  color: var(--accent-red);
+  border-color: rgba(255, 0, 60, 0.3);
+  background: rgba(255, 0, 60, 0.1);
+  box-shadow: 0 0 8px rgba(255, 0, 60, 0.2);
 }
 
 .table {
@@ -114,44 +136,55 @@
   border-collapse: separate;
   border-spacing: 0;
   overflow: hidden;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
 }
 
 .table th,
 .table td {
   text-align: left;
-  padding: 10px 10px;
-  font-size: 13px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .table th {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(231, 233, 238, 0.82);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: var(--font-heading);
 }
 
 .muted {
-  color: rgba(231, 233, 238, 0.72);
+  color: var(--text-secondary);
 }
 
 .error {
   margin-top: 12px;
-  color: #fecaca;
+  color: var(--accent-red);
 }
 
 .btn {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.07);
-  color: #e7e9ee;
-  padding: 10px 12px;
-  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  padding: 8px 14px;
+  border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 12px;
+  transition: all 0.2s ease;
 }
+
+.btn:hover:not(:disabled) {
+  background: var(--bg-panel-hover);
+}
+
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -170,10 +203,12 @@
 }
 
 .pill {
-  font-size: 12px;
+  font-size: 11px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(99, 102, 241, 0.14);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  color: rgba(231, 233, 238, 0.9);
+  background: rgba(178, 0, 255, 0.1);
+  border: 1px solid rgba(178, 0, 255, 0.2);
+  color: var(--accent-purple);
+  font-family: var(--font-mono);
+  font-weight: 600;
 }

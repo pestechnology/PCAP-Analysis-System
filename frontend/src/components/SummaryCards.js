@@ -1,7 +1,12 @@
+import { LayoutDashboard } from "lucide-react";
+
 export default function SummaryCards({ data }) {
     return (
-        <div className="card">
-            <div className="card-title">Capture Overview</div>
+        <div className="card" style={{ height: "100%" }}>
+            <div className="card-title" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, paddingBottom: "14px", borderBottom: "1px solid var(--border-subtle)", marginBottom: "16px" }}>
+                <LayoutDashboard size={16} color="var(--accent-cyan)" style={{ marginTop: "-2px" }} />
+                <span style={{ fontSize: "13px", letterSpacing: "1px", lineHeight: 1 }}>CAPTURE OVERVIEW</span>
+            </div>
 
             <div className="grid">
 

@@ -7,3 +7,8 @@ pycountry
 geoip2
 psutil
 manuf
+SQLAlchemy
+passlib[bcrypt]
+python-jose[cryptography]
+reportlab
+orjson

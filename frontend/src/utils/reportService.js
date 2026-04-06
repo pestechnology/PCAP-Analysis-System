@@ -1,0 +1,24 @@
+export const generateReport = async (section, data, format = "pdf") => {
+
+    const response = await fetch("/api/report", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            section: section,
+            data: data,
+            format: format
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error("Report generation failed");
+    }
+
+    const blob = await response.blob();
+
+    const url = window.URL.createObjectURL(blob);
+
+    window.open(url);
+};

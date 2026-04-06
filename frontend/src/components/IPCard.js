@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { UploadCloud, DownloadCloud, HardDriveUpload, HardDriveDownload, Search } from "lucide-react";
 
 function getFlagEmoji(countryCode) {
     if (!countryCode) return "";
@@ -10,14 +11,21 @@ function getFlagEmoji(countryCode) {
 }
 
 export default function IPCard({
-                                   title,
-                                   list = [],
-                                   geoData = {},
-                                   showCountry = false
-                               }) {
+    title,
+    list = [],
+    geoData = {},
+    showCountry = false
+}) {
 
     const [vtResults, setVtResults] = useState({});
     const [loadingIP, setLoadingIP] = useState(null);
+
+    let Icon = Search;
+    let iconColor = "var(--text-primary)";
+    if (title === "Public Senders") { Icon = UploadCloud; iconColor = "var(--accent-orange)"; }
+    else if (title === "Public Receivers") { Icon = DownloadCloud; iconColor = "var(--accent-blue)"; }
+    else if (title === "Private Senders") { Icon = HardDriveUpload; iconColor = "var(--accent-purple)"; }
+    else if (title === "Private Receivers") { Icon = HardDriveDownload; iconColor = "var(--accent-cyan)"; }
 
     // ==================================================
     // RISK-BASED SORTING (SOC PRIORITY ORDER)
@@ -144,7 +152,10 @@ export default function IPCard({
 
     return (
         <div className="card ip-card">
-            <div className="card-title">{title}</div>
+            <div className="card-title" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, paddingBottom: "14px", borderBottom: "1px solid var(--border-subtle)", marginBottom: "16px" }}>
+                <Icon size={16} color={iconColor} style={{ marginTop: "-2px" }} />
+                <span style={{ fontSize: "13px", letterSpacing: "1px", lineHeight: 1, textTransform: "uppercase" }}>{title}</span>
+            </div>
 
             <div className="ip-card-body">
 
@@ -154,69 +165,69 @@ export default function IPCard({
                     <div className="ip-table-wrapper">
                         <table className="ip-table">
                             <thead>
-                            <tr>
-                                <th>IP Address</th>
-                                {showCountry && <th>Country</th>}
-                                <th className="right">Packets</th>
-                                {showCountry && <th className="right">Threat</th>}
-                            </tr>
+                                <tr>
+                                    <th>IP Address</th>
+                                    {showCountry && <th>Country</th>}
+                                    <th className="right">Packets</th>
+                                    {showCountry && <th className="right">Threat</th>}
+                                </tr>
                             </thead>
 
                             <tbody>
-                            {sortedList.map((item, index) => {
-                                const ip = item[0];
-                                const count = item[1];
-                                const geo = geoData[ip];
-                                const vt = vtResults[ip];
+                                {sortedList.map((item, index) => {
+                                    const ip = item[0];
+                                    const count = item[1];
+                                    const geo = geoData[ip];
+                                    const vt = vtResults[ip];
 
-                                return (
-                                    <tr key={index}>
-                                        <td style={{ fontVariantNumeric: "tabular-nums" }}>
-                                            {ip}
-                                        </td>
-
-                                        {showCountry && (
-                                            <td>
-                                                {geo && geo.country_code ? (
-                                                    <div className="country-cell">
-                                                        <span className="flag">
-                                                            {getFlagEmoji(geo.country_code)}
-                                                        </span>
-                                                        <span className="country-name">
-                                                            {geo.country}
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="muted">Unmapped</span>
-                                                )}
+                                    return (
+                                        <tr key={index}>
+                                            <td style={{ fontVariantNumeric: "tabular-nums" }}>
+                                                {ip}
                                             </td>
-                                        )}
 
-                                        <td className="right">{count}</td>
+                                            {showCountry && (
+                                                <td>
+                                                    {geo && geo.country_code ? (
+                                                        <div className="country-cell">
+                                                            <span className="flag">
+                                                                {getFlagEmoji(geo.country_code)}
+                                                            </span>
+                                                            <span className="country-name">
+                                                                {geo.country}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="muted">Unmapped</span>
+                                                    )}
+                                                </td>
+                                            )}
 
-                                        {showCountry && (
-                                            <td className="right">
-                                                {!vt ? (
-                                                    <span
-                                                        className="enrich-link"
-                                                        onClick={() => handleEnrich(ip)}
-                                                    >
-                                                        {loadingIP === ip ? "Check" : "Enrich"}
-                                                    </span>
-                                                ) : (
-                                                    renderThreatBadge(vt)
-                                                )}
-                                            </td>
-                                        )}
-                                    </tr>
-                                );
-                            })}
+                                            <td className="right">{count}</td>
+
+                                            {showCountry && (
+                                                <td className="right">
+                                                    {!vt ? (
+                                                        <span
+                                                            className="enrich-link"
+                                                            onClick={() => handleEnrich(ip)}
+                                                        >
+                                                            {loadingIP === ip ? "Check" : "Enrich"}
+                                                        </span>
+                                                    ) : (
+                                                        renderThreatBadge(vt)
+                                                    )}
+                                                </td>
+                                            )}
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>
                 )}
 
-                {showCountry && (
+                {showCountry && list.length > 0 && (
                     <div className="vt-summary">
                         <div className="vt-summary-stats">
                             <span className="vt-clean">Clean: {summary.clean}</span>
