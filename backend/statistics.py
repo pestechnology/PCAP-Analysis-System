@@ -157,6 +157,7 @@ def analyze_tcp_behavior_advanced(file_path):
         "syn": 0,
         "ack": 0,
         "rst": 0,
+        "fin": 0,
         "timestamps": [],
         "dst_ports": set(),
         "packet_sizes": [],
@@ -187,6 +188,7 @@ def analyze_tcp_behavior_advanced(file_path):
         "-e", "tcp.flags.syn",
         "-e", "tcp.flags.ack",
         "-e", "tcp.flags.reset",
+        "-e", "tcp.flags.fin",          # NEW: graceful close tracking
         "-e", "frame.len",
         "-e", "ssl.handshake.ja3"
     ]
@@ -198,15 +200,25 @@ def analyze_tcp_behavior_advanced(file_path):
         text=True
     )
 
+    global_graceful_closes = 0
+    global_rst_closes = 0
+
     for line in process.stdout:
         try:
-            ts, src, dst, port, syn, ack, rst, length, ja3 = line.strip().split("|")
+            parts = line.strip().split("|")
+            if len(parts) < 9:
+                continue
+            ts, src, dst, port, syn, ack, rst, fin, length, *rest = parts + [""]
+            ja3 = rest[0] if rest else ""
 
             if not src or not dst or not port:
                 continue
 
-            ts = float(ts)
-            length = int(length)
+            ts = float(ts) if ts else 0.0
+            try:
+                length = int(length)
+            except ValueError:
+                length = 0
 
             flow = src_flows[src]
             flow["timestamps"].append(ts)
@@ -236,6 +248,11 @@ def analyze_tcp_behavior_advanced(file_path):
 
             if rst == "1":
                 flow["rst"] += 1
+                global_rst_closes += 1
+
+            if fin == "1":
+                flow["fin"] += 1
+                global_graceful_closes += 1
 
             target = dst_targets[dst]
             target["sources"].add(src)
@@ -243,7 +260,7 @@ def analyze_tcp_behavior_advanced(file_path):
             if syn == "1":
                 target["syn"] += 1
 
-        except:
+        except Exception:
             continue
 
     process.wait()

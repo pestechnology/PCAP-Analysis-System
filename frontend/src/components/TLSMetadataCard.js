@@ -1,4 +1,5 @@
 import React from "react";
+import { Lock } from "lucide-react";
 
 /* ============================
    TLS Version Mapping
@@ -102,8 +103,9 @@ export default function TLSMetadataCard({ data }) {
 
     return (
         <div className="card">
-            <div className="card-title" style={{ marginBottom: "25px" }}>
-                TLS / SSL Metadata
+            <div className="card-title" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, paddingBottom: "14px", borderBottom: "1px solid var(--border-subtle)", marginBottom: "25px" }}>
+                <Lock size={16} color="var(--accent-green)" style={{ marginTop: "-2px" }} />
+                <span style={{ fontSize: "13px", letterSpacing: "1px", lineHeight: 1 }}>TLS / SSL METADATA</span>
             </div>
 
             <Section title="TLS Versions" data={data.versions} />

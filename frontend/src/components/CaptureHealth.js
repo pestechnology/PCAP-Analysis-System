@@ -1,3 +1,5 @@
+import { HeartPulse } from "lucide-react";
+
 export default function CaptureHealth({
                                           valid = 0,
                                           malformed = 0,
@@ -26,7 +28,10 @@ export default function CaptureHealth({
 
     return (
         <div className="card">
-            <div className="card-title">Capture Health</div>
+            <div className="card-title" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, paddingBottom: "14px", borderBottom: "1px solid var(--border-subtle)", marginBottom: "16px" }}>
+                <HeartPulse size={16} color="var(--accent-red)" style={{ marginTop: "-2px" }} />
+                <span style={{ fontSize: "13px", letterSpacing: "1px", lineHeight: 1 }}>CAPTURE HEALTH</span>
+            </div>
 
             <div className="grid">
 
@@ -208,6 +213,37 @@ export default function CaptureHealth({
                         <li>Packet arrived earlier than expected</li>
                         <li>Network reordering event</li>
                         <li>May not always indicate loss</li>
+                    </ul>
+                </div>
+            </span>
+                        </div>
+
+                        {/* Graceful / Reset Closes */}
+                        <div style={{ marginTop: "8px", borderTop: "1px solid var(--border-subtle)", paddingTop: "8px" }}>
+                            Session Termination:
+                        </div>
+                        <div>
+                            Graceful: {retransmissions.graceful_closes || 0}
+                            <span className="info-wrapper">
+                <span className="info"> ⓘ</span>
+                <div className="tooltip-content">
+                    <ul>
+                        <li>Connections closed with FIN flags</li>
+                        <li>Proper handshake termination</li>
+                        <li>Normal network behavior</li>
+                    </ul>
+                </div>
+            </span>
+                        </div>
+                        <div>
+                            Reset: {retransmissions.rst_closes || 0}
+                            <span className="info-wrapper">
+                <span className="info"> ⓘ</span>
+                <div className="tooltip-content">
+                    <ul>
+                        <li>Connections terminated abruptly with RST</li>
+                        <li>Potential scanner or broken session</li>
+                        <li>Security indicator if high</li>
                     </ul>
                 </div>
             </span>

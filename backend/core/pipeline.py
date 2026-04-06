@@ -19,23 +19,21 @@ class AnalysisPipeline:
         print("[*] Starting Analysis Pipeline")
 
         packets = self.ingestion.load_packets()
-
         parsed_data = parse_pcap(packets)
-
         flows = self.flow_engine.build_flows(parsed_data)
-
         detections = self.detection_engine.analyze(flows)
-
         stats = extract_stats(parsed_data)
 
         scaling = ScalingManager(self.pcap_path)
-
         system_specs = scaling.get_system_specs()
         file_size = scaling.get_file_size_gb()
         recommended_chunk = scaling.recommend_chunk_size()
 
         system_info = get_host_system_info()
 
+        # ==========================
+        # IP ENRICHMENT
+        # ==========================
         enriched_ips = []
         for ip in stats.get("public_ips", []):
             reputation = check_ip_reputation(ip)
@@ -44,7 +42,10 @@ class AnalysisPipeline:
                 "reputation": reputation
             })
 
-        return {
+        # ==========================
+        # FINAL RESULTS
+        # ==========================
+        final_results = {
             "statistics": stats,
             "flows": flows,
             "detections": detections,
@@ -56,3 +57,5 @@ class AnalysisPipeline:
             },
             "host_system": system_info,
         }
+
+        return final_results

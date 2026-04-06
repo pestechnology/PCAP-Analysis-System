@@ -14,10 +14,14 @@ countries.forEach((c) => {
     }
 });
 
+/* HQ Location (e.g., Data Center / SOC HQ setup) */
+const HQ_COORDS = [37.7749, -122.4194]; // San Francisco
+const EARTH_RADIUS = 2;
+
 /* ================================
    Lat/Lon → 3D Position
 ================================ */
-function latLongToVector3(lat, lon, radius = 2.05) {
+function latLongToVector3(lat, lon, radius = EARTH_RADIUS + 0.05) {
     const phi = (90 - lat) * (Math.PI / 180);
     const theta = (lon + 180) * (Math.PI / 180);
 
@@ -25,6 +29,52 @@ function latLongToVector3(lat, lon, radius = 2.05) {
         -(radius * Math.sin(phi) * Math.cos(theta)),
         radius * Math.cos(phi),
         radius * Math.sin(phi) * Math.sin(theta)
+    );
+}
+
+/* ================================
+   Connection Arcs & Pulses
+================================ */
+function getSplineFromCoords(startVec, endVec, altitude = 0.15) {
+    const distance = startVec.distanceTo(endVec);
+    const midPoint = startVec.clone().lerp(endVec, 0.5);
+    // Lower altitude multiplier for a tighter, more direct arc
+    midPoint.normalize().multiplyScalar(EARTH_RADIUS + distance * altitude);
+    return new THREE.QuadraticBezierCurve3(startVec, midPoint, endVec);
+}
+
+function PulseLight({ curve, color }) {
+    const meshRef = useRef();
+    const [progress] = useState(() => Math.random());
+    
+    useFrame((state, delta) => {
+        if (!meshRef.current) return;
+        // Faster, cleaner pulse speed
+        meshRef.current.userData.progress = (meshRef.current.userData.progress || progress) + delta * 0.6;
+        if (meshRef.current.userData.progress > 1) {
+            meshRef.current.userData.progress = 0;
+        }
+        
+        const p = curve.getPointAt(meshRef.current.userData.progress);
+        meshRef.current.position.copy(p);
+
+        // Optional: make the pulse look like a traveling beam by orienting it along the path
+        if (meshRef.current.userData.progress + 0.01 <= 1) {
+            const nextP = curve.getPointAt(meshRef.current.userData.progress + 0.01);
+            meshRef.current.lookAt(nextP);
+        }
+    });
+
+    return (
+        <mesh ref={meshRef}>
+            {/* Elongated packet shape (cylinder or scaled sphere) */}
+            <sphereGeometry args={[0.012, 8, 8]} />
+            <meshBasicMaterial color={color} />
+            <mesh scale={[1, 1, 3]}>
+                <sphereGeometry args={[0.015, 8, 8]} />
+                <meshBasicMaterial color={color} transparent opacity={0.6} />
+            </mesh>
+        </mesh>
     );
 }
 
@@ -80,8 +130,8 @@ function Earth() {
 
     return (
         <mesh>
-            <sphereGeometry args={[2, 128, 128]} />
-            <meshStandardMaterial map={texture} />
+            <sphereGeometry args={[EARTH_RADIUS, 128, 128]} />
+            <meshStandardMaterial map={texture} roughness={0.8} metalness={0.1} />
         </mesh>
     );
 }
@@ -96,33 +146,42 @@ export default function GeoGlobeDashboard({ countryData = [] }) {
     const controlsRef = useRef();
 
     const sortedData = useMemo(() => {
-        return [...countryData].sort((a, b) => b[1] - a[1]);
+        return [...countryData]
+            .filter(([country]) => country && country !== "Unknown")
+            .sort((a, b) => b[1] - a[1]);
     }, [countryData]);
 
     const selectedCountry = sortedData[selectedIndex]?.[0];
     const selectedPackets = sortedData[selectedIndex]?.[1] || 0;
 
     const totalPackets = sortedData.reduce((s, [, p]) => s + p, 0);
+    
     function formatTrafficShare(countryPackets, totalPackets) {
-        if (!totalPackets || countryPackets === 0) {
-            return "0%";
-        }
-
+        if (!totalPackets || countryPackets === 0) return "0%";
         const raw = (countryPackets / totalPackets) * 100;
-
-        // Dynamically adjust precision
         if (raw < 0.0001) return raw.toFixed(6) + "%";
         if (raw < 0.01) return raw.toFixed(4) + "%";
         if (raw < 0.1) return raw.toFixed(3) + "%";
         if (raw < 1) return raw.toFixed(2) + "%";
-
         return raw.toFixed(1) + "%";
     }
     const percentage = formatTrafficShare(selectedPackets, totalPackets);
 
+    // Compute max packets for color coding
+    const maxPackets = sortedData.length > 0 ? sortedData[0][1] : 1;
+    function getSeverityColor(packets) {
+        const ratio = packets / maxPackets;
+        if (ratio > 0.5) return "#FF003C"; // Critical (Red)
+        if (ratio > 0.1) return "#FF9900"; // Suspicious (Orange)
+        return "#00F0FF"; // Normal (Cyan)
+    }
+
+    const hqVector = useMemo(() => latLongToVector3(HQ_COORDS[0], HQ_COORDS[1]), []);
+
     const markers = useMemo(() => {
         return sortedData
             .map(([country, packets]) => {
+
                 const coords = countryCoordinates[country];
                 if (!coords) return null;
 
@@ -130,10 +189,11 @@ export default function GeoGlobeDashboard({ countryData = [] }) {
                     country,
                     packets,
                     position: latLongToVector3(coords[0], coords[1]),
+                    color: getSeverityColor(packets)
                 };
             })
             .filter(Boolean);
-    }, [sortedData]);
+    }, [sortedData, maxPackets]);
 
     const currentMarker = markers.find(
         (m) => m.country === selectedCountry
@@ -152,19 +212,19 @@ export default function GeoGlobeDashboard({ countryData = [] }) {
     };
 
     return (
-        <div style={{ display: "flex", height: "600px", background: "#0c1220", color: "white" }}>
+        <div style={{ display: "flex", height: "600px", background: "var(--bg-primary)", color: "var(--text-primary)", borderRadius: "12px", overflow: "hidden", border: "1px solid var(--border-subtle)" }}>
 
             {/* LEFT PANEL */}
-            <div style={{ width: "380px", padding: "40px", background: "#2c2c2e" }}>
-                <h2 style={{ marginBottom: "20px" }}>Threat Intelligence</h2>
+            <div style={{ width: "380px", padding: "40px", background: "var(--bg-panel)", borderRight: "1px solid var(--border-subtle)", zIndex: 10 }}>
+                <h2 style={{ marginBottom: "20px", fontFamily: "var(--font-heading)", textTransform: "uppercase", fontSize: "14px", letterSpacing: "0.5px", color: "var(--text-secondary)" }}>Threat Intelligence</h2>
                 <div style={{height: "25px" }}></div>
                 <InfoCard title="Selected Country" value={selectedCountry} />
                 <InfoCard title="Total Packets" value={selectedPackets} large />
                 <InfoCard title="Traffic Share" value={percentage} />
 
-                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "20px", marginBottom: "30px" }}>
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "20px", marginBottom: "30px", marginTop: "30px" }}>
                     <button onClick={prevCountry} style={navBtn}>‹</button>
-                    <div>{selectedIndex + 1} / {sortedData.length}</div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "13px" }}>{selectedIndex + 1} / {sortedData.length}</div>
                     <button onClick={nextCountry} style={navBtn}>›</button>
                 </div>
             </div>
@@ -175,6 +235,7 @@ export default function GeoGlobeDashboard({ countryData = [] }) {
                 <button
                     onClick={() => setAutoRotate(!autoRotate)}
                     style={playBtn}
+                    title={autoRotate ? "Pause Auto-Rotation" : "Start Auto-Rotation"}
                 >
                     {autoRotate ? "❚❚" : "▶"}
                 </button>
@@ -187,48 +248,38 @@ export default function GeoGlobeDashboard({ countryData = [] }) {
 
                     <Earth />
 
+                    {/* HQ Marker removed by user request */}
                     {markers.map((m, i) => {
                         const isSelected = selectedCountry === m.country;
-
+                        
                         return (
                             <group
                                 key={i}
-                                position={m.position.clone().multiplyScalar(1.015)} // slight lift
+                                position={m.position.clone().multiplyScalar(1.005)}
                                 onPointerOver={() => setHoveredCountry(m)}
                                 onPointerOut={() => setHoveredCountry(null)}
-                                scale={isSelected ? 1.15 : 1}
+                                scale={isSelected ? 1.25 : 1}
                             >
 
                                 {/* Pin Head */}
                                 <mesh position={[0, 0.03, 0]}>
-                                    <sphereGeometry args={[0.025, 16, 16]} />
+                                    <sphereGeometry args={[0.02, 16, 16]} />
                                     <meshStandardMaterial
-                                        color={isSelected ? "#5ac8fa" : "#47bf68"}
-                                        emissive={isSelected ? "#5ac8fa" : "#47bf68"}
-                                        emissiveIntensity={isSelected ? 20 : 2}
-                                        toneMapped={false}
-                                    />
-                                </mesh>
-
-                                {/* Pin Tip */}
-                                <mesh position={[0, -0.005, 0]}>
-                                    <coneGeometry args={[0.015, 0.05, 16]} />
-                                    <meshStandardMaterial
-                                        color={isSelected ? "#5ac8fa" : "#47bf68"}
-                                        emissive={isSelected ? "#5ac8fa" : "#47bf68"}
-                                        emissiveIntensity={isSelected ? 18 : 1.5}
+                                        color={m.color}
+                                        emissive={m.color}
+                                        emissiveIntensity={isSelected ? 8 : 2}
                                         toneMapped={false}
                                     />
                                 </mesh>
 
                                 {/* Tooltip */}
-                                {hoveredCountry?.country === m.country && (
+                                {(hoveredCountry?.country === m.country || isSelected) && (
                                     <Html distanceFactor={8}>
                                         <div style={tooltipStyle}>
-                                            <div style={{ fontWeight: 600 }}>
+                                            <div style={{ fontWeight: 600, color: m.color, fontFamily: "var(--font-heading)" }}>
                                                 {m.country}
                                             </div>
-                                            <div style={{ fontSize: "12px", marginTop: "4px" }}>
+                                            <div style={{ fontSize: "12px", marginTop: "4px", fontFamily: "var(--font-mono)", color: "var(--text-primary)" }}>
                                                 Packets: {m.packets}
                                             </div>
                                         </div>
@@ -239,6 +290,7 @@ export default function GeoGlobeDashboard({ countryData = [] }) {
                         );
                     })}
 
+                    {/* Connection arcs removed as per user request */}
                     <CameraFocus
                         targetPosition={currentMarker?.position}
                         autoRotate={autoRotate}
@@ -251,7 +303,7 @@ export default function GeoGlobeDashboard({ countryData = [] }) {
                         enablePan={false}
                         enableZoom={true}
                         enableRotate={true}
-                        minDistance={3.5}
+                        minDistance={2.5}
                         maxDistance={8}
                         rotateSpeed={0.7}
                         zoomSpeed={0.8}
@@ -271,9 +323,9 @@ export default function GeoGlobeDashboard({ countryData = [] }) {
 
 function InfoCard({ title, value, large }) {
     return (
-        <div style={{ background: "#3a3a3c", padding: "20px", borderRadius: "16px", marginBottom: "20px" }}>
-            <div style={{ color: "#9ca3af" }}>{title}</div>
-            <div style={{ fontSize: large ? "42px" : "24px", marginTop: "8px" }}>
+        <div style={{ background: "var(--bg-panel-hover)", padding: "20px", borderRadius: "10px", marginBottom: "16px", border: "1px solid var(--border-subtle)" }}>
+            <div style={{ color: "var(--text-secondary)", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px", fontFamily: "var(--font-heading)" }}>{title}</div>
+            <div style={{ fontSize: large ? "36px" : "20px", marginTop: "10px", fontWeight: "600", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}>
                 {value || "None"}
             </div>
         </div>
@@ -281,24 +333,31 @@ function InfoCard({ title, value, large }) {
 }
 
 const tooltipStyle = {
-    background: "rgba(30,30,30,0.95)",
+    background: "var(--bg-panel)",
     padding: "8px 12px",
     borderRadius: "8px",
-    color: "white",
+    color: "var(--text-primary)",
     fontSize: "13px",
     whiteSpace: "nowrap",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.4)"
+    boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+    border: "1px solid var(--border-subtle)",
+    backdropFilter: "blur(8px)",
+    pointerEvents: "none"
 };
 
 const navBtn = {
     width: "36px",
     height: "36px",
-    borderRadius: "50%",
-    border: "none",
-    background: "#3a3a3c",
-    color: "white",
+    borderRadius: "8px",
+    border: "1px solid var(--border-subtle)",
+    background: "var(--bg-panel)",
+    color: "var(--text-primary)",
     fontSize: "18px",
     cursor: "pointer",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    transition: "background 0.2s ease"
 };
 
 const playBtn = {
@@ -306,12 +365,18 @@ const playBtn = {
     top: "20px",
     right: "20px",
     zIndex: 10,
-    width: "50px",
-    height: "50px",
+    width: "44px",
+    height: "44px",
     borderRadius: "50%",
-    border: "none",
-    background: "rgba(44,44,46,0.8)",
-    color: "white",
-    fontSize: "18px",
+    border: "1px solid var(--accent-cyan)",
+    background: "rgba(0, 240, 255, 0.1)",
+    color: "var(--accent-cyan)",
+    fontSize: "16px",
     cursor: "pointer",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    boxShadow: "0 0 16px rgba(0, 240, 255, 0.2)",
+    backdropFilter: "blur(4px)",
+    transition: "all 0.2s ease"
 };

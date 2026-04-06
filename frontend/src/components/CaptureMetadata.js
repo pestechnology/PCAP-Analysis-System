@@ -1,7 +1,13 @@
+import React from "react";
+import { FileJson } from "lucide-react";
+
 export default function CaptureMetadata({ metadata }) {
     return (
         <div className="card">
-            <div className="card-title">Capture Metadata</div>
+            <div className="card-title" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, paddingBottom: "14px", borderBottom: "1px solid var(--border-subtle)", marginBottom: "16px" }}>
+                <FileJson size={16} color="var(--accent-purple)" style={{ marginTop: "-2px" }} />
+                <span style={{ fontSize: "13px", letterSpacing: "1px", lineHeight: 1 }}>CAPTURE METADATA</span>
+            </div>
 
             <div className="grid">
 
@@ -31,22 +37,11 @@ export default function CaptureMetadata({ metadata }) {
                     </p>
                 </div>
 
-                {/* Snapshot Length */}
-                {/*<div className="metric">*/}
-                {/*    <h4>Snapshot Length</h4>*/}
-                {/*    <p>*/}
-                {/*        {metadata?.snapshot_length !== null &&*/}
-                {/*        metadata?.snapshot_length !== undefined*/}
-                {/*            ? `${metadata.snapshot_length.toLocaleString()} bytes`*/}
-                {/*            : "Not Defined (Full Capture)"}*/}
-                {/*    </p>*/}
-                {/*</div>*/}
-
                 {/* Start Time */}
                 <div className="metric">
                     <h4>Start Time</h4>
                     <p className="timestamp">
-                        {metadata?.start_time || "—"}
+                        {metadata?.start_time?.split('.')[0] || "—"}
                     </p>
                 </div>
 
@@ -54,7 +49,7 @@ export default function CaptureMetadata({ metadata }) {
                 <div className="metric">
                     <h4>End Time</h4>
                     <p className="timestamp">
-                        {metadata?.end_time || "—"}
+                        {metadata?.end_time?.split('.')[0] || "—"}
                     </p>
                 </div>
 

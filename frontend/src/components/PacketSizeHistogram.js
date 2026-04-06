@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { BarChart2 } from "lucide-react";
 import {
     Chart,
     BarController,
@@ -74,7 +75,10 @@ export default function PacketSizeHistogram({ histogram = {} }) {
 
     return (
         <div className="card">
-            <div className="card-title">Packet Size Distribution</div>
+            <div className="card-title" style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, paddingBottom: "14px", borderBottom: "1px solid var(--border-subtle)", marginBottom: "16px" }}>
+                <BarChart2 size={16} color="var(--accent-cyan)" style={{ marginTop: "-2px" }} />
+                <span style={{ fontSize: "13px", letterSpacing: "1px", lineHeight: 1 }}>PACKET SIZE DISTRIBUTION</span>
+            </div>
             <div style={{ height: "320px" }}>
                 <canvas ref={canvasRef}></canvas>
             </div>
