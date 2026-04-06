@@ -1,25 +1,72 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Globe, Activity, Zap, Server, Lock, ChevronRight, CheckCircle2, FileArchive, Key, Database } from 'lucide-react';
+import { ShieldAlert, Activity, ChevronRight, Lock, Layers, CheckCircle2, X } from 'lucide-react';
 import Upload from '../components/Upload';
 import '../index.css';
 
 export default function Home({ setData }) {
     const navigate = useNavigate();
+    const [activeModal, setActiveModal] = useState(null);
+
+    const pillars = [
+        {
+            id: 0,
+            icon: <Activity size={32} color="var(--accent-cyan)" />,
+            accent: 'var(--accent-cyan)',
+            accentHex: '#00f0ff',
+            title: 'Network Intelligence',
+            summary: 'Complete situational awareness across every layer of your network — from physical infrastructure to application-layer flows.',
+            items: [
+                { label: 'Full-Spectrum Traffic Visibility', detail: 'End-to-end inspection of all network communications across every standard and non-standard protocol.' },
+                { label: 'Geospatial Threat Mapping', detail: 'Attribution of network activity to physical locations, enabling rapid identification of foreign or anomalous origin points.' },
+                { label: 'Infrastructure Fingerprinting', detail: 'Identification of hardware vendors, device roles, and network topology from observed traffic patterns.' },
+                { label: 'Encrypted Channel Profiling', detail: 'Assessment of encryption posture, certificate validity, and cipher compliance without decryption.' },
+            ]
+        },
+        {
+            id: 1,
+            icon: <ShieldAlert size={32} color="var(--accent-red)" />,
+            accent: 'var(--accent-red)',
+            accentHex: '#ff4d4d',
+            title: 'Threat & Risk Detection',
+            summary: 'Proactive identification of adversarial activity, policy violations, and indicators of compromise across ingested capture data.',
+            items: [
+                { label: 'Signature-Based Threat Correlation', detail: 'Continuous matching of observed traffic against a curated library of known threat campaigns, malware families, and attack frameworks.' },
+                { label: 'Adversarial Infrastructure Attribution', detail: 'Real-time reputation scoring of observed endpoints against global threat intelligence feeds.' },
+                { label: 'Credential Exposure Assessment', detail: 'Detection of unprotected authentication events traversing the network in violation of security policy.' },
+                { label: 'Web-Layer Threat Hunting', detail: 'Reconstruction and analysis of application-layer sessions to surface command execution, data staging, and exfiltration activity.' },
+            ]
+        },
+        {
+            id: 2,
+            icon: <Layers size={32} color="var(--accent-purple)" />,
+            accent: 'var(--accent-purple)',
+            accentHex: '#a855f7',
+            title: 'Resilience & Compliance',
+            summary: 'Operational controls that ensure data fidelity, audit-readiness, and continuity of analysis at any scale.',
+            items: [
+                { label: 'Artifact Preservation & Chain of Custody', detail: 'Secure recovery of files and evidentiary objects present in network traffic, with integrity guarantees for forensic admissibility.' },
+                { label: 'Large-Scale Capture Management', detail: 'Intelligent handling of high-volume capture data, ensuring no evidence is lost or degraded regardless of file size.' },
+                { label: 'Multi-Protocol Session Reconstruction', detail: 'Coherent reassembly of fragmented or multi-path communications, including legacy and modern transport protocols.' },
+                { label: 'Structured Reporting & Export', detail: 'Production of audit-ready reports in standard formats, suitable for submission to compliance, legal, or executive stakeholders.' },
+            ]
+        },
+    ];
+
+    const activePillar = pillars.find(p => p.id === activeModal);
 
     return (
         <div className="app-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-primary)' }}>
-            
-            {/* INVISIBLE NOISE OVERLAY FOR TEXTURE */}
+
             <div style={{
                 position: 'fixed',
                 top: 0, left: 0, right: 0, bottom: 0,
-                backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\"0 0 200 200\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cfilter id=\"noiseFilter\"%3E%3CfeTurbulence type=\"fractalNoise\" baseFrequency=\"0.65\" numOctaves=\"3\" stitchTiles=\"stitch\"/%3E%3C/filter%3E%3Crect width=\"100%25\" height=\"100%25\" filter=\"url(%23noiseFilter)\" opacity=\"0.05\"/%3E%3C/svg%3E")',
+                backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\' opacity=\'0.05\'/%3E%3C/svg%3E")',
                 pointerEvents: 'none',
                 zIndex: 0
             }}></div>
 
-            {/* NAV BAR */}
             <nav style={{ padding: '24px 48px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', position: 'relative', zIndex: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <img src="/logo.png" alt="PCAP Analysis Logo" style={{ height: '32px', objectFit: 'contain' }} />
@@ -28,40 +75,39 @@ export default function Home({ setData }) {
                     </span>
                 </div>
                 <div style={{ display: 'flex', gap: '32px', fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)' }}>
-                    <a href="#about" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e=>e.target.style.color='var(--accent-cyan)'} onMouseOut={e=>e.target.style.color='var(--text-secondary)'}>Architecture</a>
-                    <a href="#capabilities" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e=>e.target.style.color='var(--accent-cyan)'} onMouseOut={e=>e.target.style.color='var(--text-secondary)'}>Capabilities</a>
-                    <a href="#upload-zone" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e=>e.target.style.color='var(--accent-cyan)'} onMouseOut={e=>e.target.style.color='var(--text-secondary)'}>Analyze</a>
+                    <a href="#about" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.target.style.color = 'var(--accent-cyan)'} onMouseOut={e => e.target.style.color = 'var(--text-secondary)'}>Architecture</a>
+                    <a href="#capabilities" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.target.style.color = 'var(--accent-cyan)'} onMouseOut={e => e.target.style.color = 'var(--text-secondary)'}>Capabilities</a>
+                    <a href="#upload-zone" style={{ color: 'inherit', textDecoration: 'none', transition: 'color 0.2s' }} onMouseOver={e => e.target.style.color = 'var(--accent-cyan)'} onMouseOut={e => e.target.style.color = 'var(--text-secondary)'}>Analyze</a>
                 </div>
             </nav>
 
             <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', zIndex: 10, paddingBottom: '100px' }}>
-                
-                {/* HERO SECTION */}
+
                 <section style={{ maxWidth: '1400px', width: '100%', padding: '0 48px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
-                    
+
                     <div style={{ display: 'flex', justifyContent: 'center', position: 'relative', width: '100%', marginTop: '30px' }}>
-                        <img 
-                            src="/pcap_dashboard_ui.png" 
-                            alt="PCAP Traffic Analysis Interface" 
-                            style={{ 
+                        <img
+                            src="/pcap_dashboard_ui.png"
+                            alt="PCAP Traffic Analysis Interface"
+                            style={{
                                 width: '100%',
-                                maxWidth: '800px', 
+                                maxWidth: '800px',
                                 maxHeight: '35vh',
                                 objectFit: 'contain',
                                 borderRadius: '12px',
                                 border: '1px solid rgba(0, 240, 255, 0.2)',
                                 boxShadow: '0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(0, 240, 255, 0.05)',
-                                animation: 'float 8s ease-in-out infinite' 
-                            }} 
+                                animation: 'float 8s ease-in-out infinite'
+                            }}
                         />
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center', marginTop: '10px' }}>
-                        
+
                         <h1 style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1.1, color: 'var(--text-primary)' }}>
                             PCAP Analysis System
                         </h1>
-                        
+
                         <p style={{ fontSize: '15px', color: 'var(--text-secondary)', lineHeight: 1.5, maxWidth: '750px', fontWeight: 400 }}>
                             Upload raw packet capture files for deep packet inspection. Our platform processes network traffic, extracts geographic routing endpoints, evaluates IDS rules, and provides comprehensive protocol diagnostics.
                         </p>
@@ -70,7 +116,7 @@ export default function Home({ setData }) {
                             <div style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <Lock size={16} color="var(--accent-cyan)" /> SECURE UPLOAD GATEWAY
                             </div>
-                            <Upload 
+                            <Upload
                                 onResult={(result) => {
                                     setData(prev => ({
                                         ...prev,
@@ -85,7 +131,6 @@ export default function Home({ setData }) {
                     </div>
                 </section>
 
-                {/* WHAT & WHY SECTION */}
                 <section id="about" style={{ width: '100%', background: 'rgba(255,255,255,0.01)', borderTop: '1px solid rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.03)', padding: '100px 48px' }}>
                     <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', gap: '80px', alignItems: 'center' }}>
                         <div style={{ flex: 1 }}>
@@ -98,7 +143,7 @@ export default function Home({ setData }) {
                             <p style={{ fontSize: '16px', color: 'var(--text-secondary)', lineHeight: 1.8, textAlign: 'justify' }}>
                                 The PCAP Analysis System streamlines this workflow by automatically parsing network layers, aggregating metadata, and organizing connections into actionable tables. It enables security analysts to swiftly identify unauthorized protocols, misconfigured data streams, and malicious payloads directly from the browser.
                             </p>
-                            
+
                             <div style={{ marginTop: '40px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                 {['Comprehensive Packet Filtering', 'Domain and Payload Extraction', 'Structured Geographical Mapping'].map((text, i) => (
                                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '15px', color: 'var(--text-primary)', fontWeight: 500 }}>
@@ -120,43 +165,180 @@ export default function Home({ setData }) {
                     </div>
                 </section>
 
-                {/* SYSTEM CAPABILITIES ENHANCED GRID */}
                 <section id="capabilities" style={{ maxWidth: '1400px', width: '100%', padding: '100px 48px' }}>
-                    <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-                        <h2 style={{ fontSize: '36px', fontWeight: 800, color: 'var(--text-primary)' }}>System Capabilities</h2>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '16px', marginTop: '16px', maxWidth: '600px', margin: '16px auto 0' }}>Comprehensive packet processing designed exclusively for security and operations professionals.</p>
+                    <div style={{ textAlign: 'center', marginBottom: '64px' }}>
+                        <h2 style={{ fontSize: '36px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>System Capabilities</h2>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '16px', marginTop: '16px', maxWidth: '560px', margin: '16px auto 0', lineHeight: 1.7 }}>A unified analysis platform built for security operations, compliance, and incident response teams.</p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
-                        
-                        {[
-                            { icon: <Activity size={28} color="var(--accent-cyan)" />, title: "Deep Packet Parsing", desc: "Isolates and inspects individual packet payloads, stripping metadata for absolute protocol visibility." },
-                            { icon: <Globe size={28} color="var(--accent-purple)" />, title: "Geospatial Routing", desc: "Resolves terminal nodes via GeoIP to map syndication clusters and hostile nation-state infra." },
-                            { icon: <ShieldAlert size={28} color="var(--accent-red)" />, title: "Suricata IDS Core", desc: "Maps traffic against high-fidelity threat intelligence signatures spanning trojans, rootkits, and C2." },
-                            { icon: <Server size={28} color="var(--accent-green)" />, title: "Micro-Flow Diagnostics", desc: "Reconstructs TCP streams to analyze broken handshakes, retransmission rates, and buffer timeouts." },
-                            { icon: <Lock size={28} color="var(--accent-yellow)" />, title: "Cryptographic Metadata", desc: "Extracts TLS/SSL handshakes, cipher suites, and underlying unencrypted domains without MiTM." },
-                            { icon: <Zap size={28} color="var(--accent-orange)" />, title: "MAC Vendor Resolution", desc: "Breaks down physical hardware infrastructure routing the traffic locally over Layer 2 networks." },
-                            { icon: <FileArchive size={28} color="var(--accent-blue)" />, title: "File Extraction", desc: "Carves executables, documents, and media artifacts directly from unencrypted SMB, HTTP, and FTP streams." },
-                            { icon: <Key size={28} color="var(--accent-red)" />, title: "Credential Inference", desc: "Automatically identifies and lists plain-text authentication attempts across legacy or misconfigured protocols." },
-                            { icon: <Database size={28} color="var(--accent-cyan)" />, title: "HTTP Forensics", desc: "Assembles raw HTTP transactions into human-readable request and response combinations for web-layer threat hunting." },
-                        ].map((feature, idx) => (
-                            <div key={idx} className="card hover-glow" style={{ padding: '32px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', transition: 'all 0.3s ease' }}>
-                                <div style={{ marginBottom: '20px', background: 'rgba(0,0,0,0.3)', width: '56px', height: '56px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    {feature.icon}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '28px', alignItems: 'stretch' }}>
+                        {pillars.map((pillar) => (
+                            <div
+                                key={pillar.id}
+                                style={{
+                                    padding: '36px',
+                                    background: 'rgba(255,255,255,0.02)',
+                                    border: '1px solid rgba(255,255,255,0.07)',
+                                    borderRadius: '20px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '20px',
+                                    transition: 'border-color 0.25s, box-shadow 0.25s',
+                                    cursor: 'default'
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.borderColor = pillar.accentHex + '55';
+                                    e.currentTarget.style.boxShadow = `0 0 32px ${pillar.accentHex}12`;
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)';
+                                    e.currentTarget.style.boxShadow = 'none';
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                    <div style={{
+                                        width: '56px', height: '56px', borderRadius: '14px',
+                                        background: `${pillar.accentHex}18`,
+                                        border: `1px solid ${pillar.accentHex}35`,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        flexShrink: 0
+                                    }}>
+                                        {pillar.icon}
+                                    </div>
+                                    <h3 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>{pillar.title}</h3>
                                 </div>
-                                <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '12px', color: 'var(--text-primary)' }}>
-                                    {feature.title}
-                                </h3>
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.7' }}>
-                                    {feature.desc}
+
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.75, margin: 0, flex: 1 }}>
+                                    {pillar.summary}
                                 </p>
+
+                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '20px' }}>
+                                    <button
+                                        onClick={() => setActiveModal(pillar.id)}
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            padding: '8px 16px',
+                                            background: `${pillar.accentHex}18`,
+                                            border: `1px solid ${pillar.accentHex}40`,
+                                            borderRadius: '8px',
+                                            color: pillar.accent,
+                                            fontSize: '13px',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            letterSpacing: '0.2px',
+                                            transition: 'background 0.2s, border-color 0.2s'
+                                        }}
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.background = `${pillar.accentHex}28`;
+                                            e.currentTarget.style.borderColor = `${pillar.accentHex}70`;
+                                        }}
+                                        onMouseLeave={e => {
+                                            e.currentTarget.style.background = `${pillar.accentHex}18`;
+                                            e.currentTarget.style.borderColor = `${pillar.accentHex}40`;
+                                        }}
+                                    >
+                                        View Details <ChevronRight size={14} />
+                                    </button>
+                                </div>
                             </div>
                         ))}
-
                     </div>
                 </section>
 
-                {/* CAPTURE GUIDE SECTION */}
+                {activeModal !== null && activePillar && createPortal(
+                    <div
+                        onClick={() => setActiveModal(null)}
+                        style={{
+                            position: 'fixed', inset: 0,
+                            background: 'rgba(3, 7, 18, 0.85)',
+                            backdropFilter: 'blur(12px)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 9999, padding: '24px'
+                        }}
+                    >
+                        <div
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                                width: '100%', maxWidth: '560px',
+                                background: '#0d1220',
+                                border: `1px solid ${activePillar.accentHex}40`,
+                                borderRadius: '24px',
+                                padding: '48px',
+                                boxShadow: `0 40px 80px rgba(0,0,0,0.8), 0 0 40px ${activePillar.accentHex}14`,
+                                position: 'relative'
+                            }}
+                        >
+                            <button
+                                onClick={() => setActiveModal(null)}
+                                style={{
+                                    position: 'absolute', top: '20px', right: '20px',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    borderRadius: '8px',
+                                    color: 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    padding: '6px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                            >
+                                <X size={16} />
+                            </button>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+                                <div style={{
+                                    width: '52px', height: '52px', borderRadius: '13px',
+                                    background: `${activePillar.accentHex}18`,
+                                    border: `1px solid ${activePillar.accentHex}35`,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                }}>
+                                    {activePillar.icon}
+                                </div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)' }}>{activePillar.title}</h3>
+                                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: activePillar.accent, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>Capability Overview</p>
+                                </div>
+                            </div>
+
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.75, margin: '0 0 28px' }}>
+                                {activePillar.summary}
+                            </p>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                                {activePillar.items.map((item, i) => (
+                                    <div
+                                        key={i}
+                                        style={{
+                                            padding: '18px 0',
+                                            borderTop: '1px solid rgba(255,255,255,0.06)',
+                                            display: 'flex', gap: '16px', alignItems: 'flex-start'
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: '28px', height: '28px', borderRadius: '8px', flexShrink: 0,
+                                            background: `${activePillar.accentHex}15`,
+                                            border: `1px solid ${activePillar.accentHex}30`,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            fontSize: '11px', fontWeight: 700, color: activePillar.accent
+                                        }}>
+                                            {String(i + 1).padStart(2, '0')}
+                                        </div>
+                                        <div>
+                                            <p style={{ margin: '0 0 5px', fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{item.label}</p>
+                                            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.65 }}>{item.detail}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
+
                 <section id="capture-guide" style={{ maxWidth: '1400px', width: '100%', padding: '40px 48px 100px' }}>
                     <div style={{ textAlign: 'center', marginBottom: '60px' }}>
                         <h2 style={{ fontSize: '36px', fontWeight: 800, color: 'var(--text-primary)' }}>Working with PCAP Files</h2>
@@ -164,18 +346,17 @@ export default function Home({ setData }) {
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
-                        
-                        {/* WINDOWS */}
+
                         <div className="card hover-glow" style={{ padding: '32px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', transition: 'all 0.3s ease' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--accent-cyan)'}}></div> Windows Capture
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--accent-cyan)' }}></div> Windows Capture
                             </h3>
                             <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.7', marginBottom: '16px' }}>
-                                Generate `.pcap` files using professional graphical tools like <strong style={{color:"var(--text-primary)"}}>Wireshark</strong>.
+                                Generate `.pcap` files using professional graphical tools like <strong style={{ color: "var(--text-primary)" }}>Wireshark</strong>.
                             </p>
                             <ol style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.7', paddingLeft: '20px', marginBottom: '24px' }}>
-                                <li style={{ marginBottom: '8px' }}>Select your active <strong style={{color:"var(--text-primary)"}}>Network Adapter</strong> from the interface list.</li>
-                                <li style={{ marginBottom: '8px' }}>Click the <strong style={{color:"var(--text-primary)"}}>Shark Icon</strong> to initiate real-time capture.</li>
+                                <li style={{ marginBottom: '8px' }}>Select your active <strong style={{ color: "var(--text-primary)" }}>Network Adapter</strong> from the interface list.</li>
+                                <li style={{ marginBottom: '8px' }}>Click the <strong style={{ color: "var(--text-primary)" }}>Shark Icon</strong> to initiate real-time capture.</li>
                                 <li>Save the file in `.pcap` or `.pcapng` format.</li>
                             </ol>
                             <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
@@ -185,13 +366,12 @@ export default function Home({ setData }) {
                             </div>
                         </div>
 
-                        {/* UNIX */}
                         <div className="card hover-glow" style={{ padding: '32px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', transition: 'all 0.3s ease' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--accent-orange)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--accent-orange)'}}></div> Linux / Unix Terminal
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--accent-orange)' }}></div> Linux / Unix Terminal
                             </h3>
                             <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.7', marginBottom: '16px' }}>
-                                Use the <strong style={{color:"var(--text-primary)"}}>tcpdump</strong> command-line utility to quickly and efficiently capture network traffic directly to a file.
+                                Use the <strong style={{ color: "var(--text-primary)" }}>tcpdump</strong> command-line utility to quickly and efficiently capture network traffic directly to a file.
                             </p>
                             <div style={{ background: 'rgba(0,0,0,0.5)', padding: '12px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '12px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--accent-orange)' }}>
                                 sudo tcpdump -i eth0 -w dump.pcap
@@ -207,13 +387,12 @@ export default function Home({ setData }) {
                             </div>
                         </div>
 
-                        {/* MACOS */}
                         <div className="card hover-glow" style={{ padding: '32px', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', transition: 'all 0.3s ease' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--accent-purple)'}}></div> macOS Devices
+                                <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'var(--accent-purple)' }}></div> macOS Devices
                             </h3>
                             <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.7', marginBottom: '16px' }}>
-                                macOS ships with a native <strong style={{color:"var(--text-primary)"}}>tcpdump</strong> binary. Alternatively, use Homebrew to install standard CLI tooling.
+                                macOS ships with a native <strong style={{ color: "var(--text-primary)" }}>tcpdump</strong> binary. Alternatively, use Homebrew to install standard CLI tooling.
                             </p>
                             <div style={{ background: 'rgba(0,0,0,0.5)', padding: '12px 16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '12px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--accent-purple)' }}>
                                 brew install wireshark
@@ -231,10 +410,9 @@ export default function Home({ setData }) {
 
                     </div>
                 </section>
-                
+
             </main>
 
-            {/* ENTERPRISE FOOTER */}
             <footer style={{ background: '#050505', borderTop: '1px solid rgba(255,255,255,0.05)', padding: '60px 48px', position: 'relative', zIndex: 10 }}>
                 <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '40px' }}>
                     <div style={{ maxWidth: '300px' }}>
@@ -251,9 +429,9 @@ export default function Home({ setData }) {
                         <div>
                             <h4 style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 700, marginBottom: '20px' }}>Capabilities</h4>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                                <span style={{ cursor: 'pointer' }}>Packet Parsing</span>
-                                <span style={{ cursor: 'pointer' }}>Heuristics Logic</span>
-                                <span style={{ cursor: 'pointer' }}>Threat Context</span>
+                                <span style={{ cursor: 'pointer' }}>Network Intelligence</span>
+                                <span style={{ cursor: 'pointer' }}>Threat Detection</span>
+                                <span style={{ cursor: 'pointer' }}>Compliance & Reporting</span>
                             </div>
                         </div>
                         <div>
@@ -266,7 +444,7 @@ export default function Home({ setData }) {
                         </div>
                     </div>
                 </div>
-                
+
                 <div style={{ maxWidth: '1400px', margin: '40px auto 0', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
                     <span>© 2026 PCAP Analysis System. All systems operational.</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

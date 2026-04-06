@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useLocation } from "react-router-dom";
 import { 
     startAnalysis, 
     pollProgress, 
@@ -12,6 +13,7 @@ import {
 import { AlertCircle, Download, CheckCircle2, Split, X } from "lucide-react";
 
 export default function Upload({ onResult, currentFilename, currentMode }) {
+    const { pathname } = useLocation();
 
     const [file, setFile] = useState(null);
     const [mode, setMode] = useState("—");
@@ -425,7 +427,7 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                 </button>
             </div>
 
-            {!file && !currentFilename && (
+            {!file && !currentFilename && pathname === '/' && (
                 <div style={{ marginTop: '4px', textAlign: 'center' }}>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', opacity: 0.8 }}>
                         Not sure how to capture a PCAP?{' '}

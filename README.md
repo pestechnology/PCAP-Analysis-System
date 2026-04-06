@@ -1,4 +1,4 @@
-# PCAP Analysis System
+# PCAP ANALYSIS SYSTEM
 
 A network traffic analysis platform designed to process PCAP files, detect suspicious activity, enrich threat intelligence, and visualize results through an interactive dashboard.
 
@@ -233,7 +233,8 @@ The detection engine identifies suspicious patterns such as:
 
 External threat intelligence sources are used to enrich IP and domain information.
 
-### Suricata IDS Integration
+
+### Suricata Integration
 
 The system integrates Suricata to detect known attack signatures using IDS rules.
 
@@ -257,9 +258,9 @@ The frontend dashboard provides:
 ### Backend
 
 - Python
-- Flask
+- FastAPI
 - Scapy
-- PyShark
+- TShark
 
 ### Frontend
 
@@ -543,3 +544,9 @@ docker compose up
 - The `.env` file should **not be committed to Git**.
 - Ensure `.env` is included in `.gitignore`.
 - Without the VirusTotal API key, **threat intelligence enrichment features will not function**.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
