@@ -1,5 +1,8 @@
 import os
 import shutil
+import asyncio
+import uuid
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse, ORJSONResponse
@@ -9,6 +12,7 @@ from backend.core.analysis_recommender import AnalysisRecommender
 from backend.analysis_engine import analyze_parallel, analysis_progress
 from backend.utils.file_validation import validate_pcap_file
 from backend.core.report_builder import build_csv, build_pdf
+from backend.core.chunk_splitter import split_pcap_by_size
 
 try:
     from core.pipeline import AnalysisPipeline
@@ -16,11 +20,8 @@ try:
 except ImportError:
     USE_PIPELINE = False
 
-
 VT_API_KEY = os.getenv("VT_API_KEY", "YOUR_API_KEY")
-
 app = FastAPI(title="PCAP Analysis Tool")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -35,69 +36,40 @@ def system_info():
 
 @app.post("/recommend-analysis")
 async def recommend_analysis(file: UploadFile = File(...)):
-
     temp_path = f"temp_{file.filename}"
-
     with open(temp_path, "wb") as buffer:
         buffer.write(await file.read())
-
     try:
         validate_pcap_file(temp_path, file.filename)
     except ValueError as e:
         os.remove(temp_path)
         raise HTTPException(status_code=400, detail=str(e))
-
     recommender = AnalysisRecommender(temp_path)
     recommendation = recommender.recommend()
-
     recommendation["file_path"] = temp_path
-
     return recommendation
 
 @app.post("/analyze-recommended")
 async def analyze_recommended(file_path: str, chunk_packets: int = None):
-
     job_id, results = analyze_parallel(file_path, chunk_packets)
-
-    return {
-        "job_id": job_id,
-        **results
-    }
+    return {"job_id": job_id, **results}
 
 @app.get("/analysis-progress/{job_id}")
 def get_progress(job_id: str):
     return analysis_progress.get(job_id, {})
 
-# ===============================
-# PCAP ANALYSIS ENDPOINT (sync — unchanged legacy path)
-# ===============================
 @app.post("/analyze")
 async def analyze(file: UploadFile = File(...)):
-
     file_path = f"/tmp/{file.filename}"
-
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-
     try:
         validate_pcap_file(file_path, file.filename)
     except ValueError as e:
         os.remove(file_path)
         return {"error": str(e)}
-
     job_id, results = analyze_parallel(file_path)
-
-    return {
-        "job_id": job_id,
-        **results
-    }
-
-
-# ===============================
-# ASYNC ANALYZE — returns job_id immediately, analysis runs in background
-# ===============================
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
+    return {"job_id": job_id, **results}
 
 _thread_pool = ThreadPoolExecutor(max_workers=4)
 
@@ -110,57 +82,36 @@ def _start_analysis_job(file_path, jid, advanced=False):
         "current_stage": "Uploading and validating capture…",
         "percent": 2
     }
-
     def _run(jid, path):
         try:
             analyze_parallel(path, _job_id_override=jid)
         except Exception as e:
             analysis_progress[jid]["status"] = "error"
             analysis_progress[jid]["current_stage"] = f"Analysis failed: {e}"
-
     loop = asyncio.get_event_loop()
     loop.run_in_executor(_thread_pool, _run, jid, file_path)
 
 @app.post("/analyze-async")
 async def analyze_async(file: UploadFile = File(...), advanced: bool = Query(False)):
-    """
-    Upload a PCAP and immediately receive a job_id.
-    advanced=True enables chunk retrieval after analysis.
-    """
     file_path = f"/tmp/{file.filename}"
-
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
-
     try:
         validate_pcap_file(file_path, file.filename)
     except ValueError as e:
         os.remove(file_path)
         raise HTTPException(status_code=400, detail=str(e))
-
-    import uuid
     job_id = str(uuid.uuid4())
     _start_analysis_job(file_path, job_id, advanced)
-
     return {"job_id": job_id}
-
-# ===============================
-# CHUNKED UPLOAD ENDPOINTS
-# ===============================
-import uuid
 
 @app.post("/upload/init")
 async def upload_init(filename: str = Query(...)):
-    """Initialize a chunked upload session."""
     upload_id = str(uuid.uuid4())
-    # Ensure filename is safe (basic)
     safe_name = "".join([c for c in filename if c.isalnum() or c in "._-"])
     temp_path = f"/tmp/up_{upload_id}_{safe_name}"
-    
-    # Touch file
     with open(temp_path, "wb") as f:
         pass
-        
     return {"upload_id": upload_id}
 
 @app.post("/upload/chunk")
@@ -170,16 +121,12 @@ async def upload_chunk(
     chunk_index: int = Query(...),
     file: UploadFile = File(...)
 ):
-    """Append a chunk to the temporary upload file."""
     safe_name = "".join([c for c in filename if c.isalnum() or c in "._-"])
     temp_path = f"/tmp/up_{upload_id}_{safe_name}"
-    
     if not os.path.exists(temp_path):
         raise HTTPException(status_code=404, detail="Upload session not found")
-        
     with open(temp_path, "ab") as f:
         shutil.copyfileobj(file.file, f)
-        
     return {"status": "ok", "chunk": chunk_index}
 
 @app.post("/upload/complete")
@@ -188,29 +135,21 @@ async def upload_complete(
     filename: str = Query(...),
     advanced: bool = Query(False)
 ):
-    """Finalize the chunked upload and start analysis."""
     safe_name = "".join([c for c in filename if c.isalnum() or c in "._-"])
     temp_path = f"/tmp/up_{upload_id}_{safe_name}"
-    
     if not os.path.exists(temp_path):
         raise HTTPException(status_code=404, detail="Upload file not found")
-        
     try:
         validate_pcap_file(temp_path, filename)
     except ValueError as e:
         os.remove(temp_path)
         raise HTTPException(status_code=400, detail=str(e))
-        
     job_id = str(uuid.uuid4())
     _start_analysis_job(temp_path, job_id, advanced)
-    
     return {"job_id": job_id}
 
 @app.get("/analysis-chunks/{job_id}")
 def get_analysis_chunks(job_id: str):
-    """Returns a list of chunk filenames for a specific job."""
-    # Chunks are stored in /tmp with prefix {job_id}_chunk
-    import os
     chunks = sorted([
         f for f in os.listdir("/tmp")
         if f.startswith(f"{job_id}_chunk")
@@ -221,103 +160,65 @@ def get_analysis_chunks(job_id: str):
 
 @app.get("/download-chunk/{job_id}/{filename}")
 def download_chunk(job_id: str, filename: str):
-    """Stream a specific chunk file back to the client."""
     if not filename.startswith(f"{job_id}_chunk"):
-        raise HTTPException(status_code=403, detail="Security violation: Invalid chunk access")
-    
+        raise HTTPException(status_code=403, detail="Security violation")
     path = f"/tmp/{filename}"
     if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail="Chunk file not found")
-        
+        raise HTTPException(status_code=404, detail="Not found")
     def iterfile():
         with open(path, "rb") as f:
             yield from f
-
     return StreamingResponse(
         iterfile(),
-        media_type="application/vnd.tcpdump.pcap",
+        media_type="application/octet-stream",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
-
-# ===============================
-# ANALYSIS RESULT — fetch final result by job_id
-# ===============================
 @app.get("/analysis-result/{job_id}")
 def get_analysis_result(job_id: str):
-    """
-    Fetch finalized analysis data for a given job_id.
-    Reads from disk-backed storage to support GB-sized PCAPs.
-    """
     from backend.analysis_engine import load_result_from_disk
     result = load_result_from_disk(job_id)
-    
     if result is None:
         return JSONResponse(status_code=202, content={"status": "processing"})
-        
     return ORJSONResponse(result)
 
-# ===============================
-# HTTP STREAM RECONSTRUCTION
-# ===============================
 @app.get("/api/http-stream/{job_id}/{stream_index}")
 def get_http_stream(job_id: str, stream_index: str):
-    """Fetch the raw ASCII representation of a TCP stream directly from the PCAP."""
     import subprocess
     import orjson
-    
     res_path = f"/tmp/{job_id}_result.json"
     if not os.path.exists(res_path):
-        raise HTTPException(status_code=404, detail="Analysis result not found")
-        
+        raise HTTPException(status_code=404, detail="Not found")
     with open(res_path, "rb") as f:
         data = orjson.loads(f.read())
-        
     pcap_filename = data.get("_pcap_filename")
     if not pcap_filename:
-        raise HTTPException(status_code=404, detail="PCAP file reference not found")
-        
+        raise HTTPException(status_code=404, detail="Not found")
     pcap_path = f"/tmp/{pcap_filename}"
     if not os.path.exists(pcap_path):
-        raise HTTPException(status_code=404, detail="Original PCAP file no longer exists on disk")
-        
+        raise HTTPException(status_code=404, detail="Not found")
     cmd = [
         "tshark", "-r", pcap_path,
         "-q", "-z", f"follow,tcp,ascii,{stream_index}"
     ]
-    
     try:
         out = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         return {"stream_index": stream_index, "data": out.stdout}
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=504, detail="Stream extraction timed out")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ===============================
-# EXPORT REPORT ENDPOINT
-# ===============================
 from pydantic import BaseModel
 from typing import Any, Dict
 
 class ExportRequest(BaseModel):
-    format: str = "pdf"          # "csv" or "pdf"
-    data: Dict[str, Any]         # full analysis result sent from frontend
+    format: str = "pdf"
+    data: Dict[str, Any]
 
 @app.post("/api/export-report")
 def export_report(request: ExportRequest):
-    """
-    Generate and stream a CSV or PDF report.
-    The frontend POSTs the full analysis data it already has in React state,
-    so this endpoint is stateless - no server-side caching required.
-    """
-    if request.format not in ("csv", "pdf"):
-        raise HTTPException(status_code=400, detail="format must be 'csv' or 'pdf'")
-
     data = request.data
     pcap_filename = data.get("_pcap_filename") or data.get("current_filename") or "capture.pcap"
     stem = pcap_filename.rsplit(".", 1)[0]
-
     try:
         if request.format == "csv":
             content = build_csv(data, pcap_filename)
@@ -328,13 +229,7 @@ def export_report(request: ExportRequest):
             media_type = "application/pdf"
             filename = f"pcap_report_{stem}.pdf"
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Report generation failed: {str(e)}"
-        )
-
+        raise HTTPException(status_code=500, detail=f"Failed: {str(e)}")
     return StreamingResponse(
         iter([content]),
         media_type=media_type,
@@ -344,9 +239,55 @@ def export_report(request: ExportRequest):
         }
     )
 
-# ===============================
-# IP ENRICHMENT (VirusTotal)
-# ===============================
 @app.get("/enrich/ip/{ip}")
 def enrich_ip(ip: str):
     return check_ip_reputation(ip)
+
+@app.post("/split-pcap")
+async def split_pcap_endpoint(file: UploadFile = File(...)):
+    split_id = str(uuid.uuid4().hex)[:8]
+    ext = ".pcap"
+    if file.filename.lower().endswith(".pcapng"): ext = ".pcapng"
+    elif file.filename.lower().endswith(".cap"): ext = ".cap"
+    
+    safe_name = "".join([c for c in file.filename if c.isalnum() or c in "._-"])
+    temp_path = f"/tmp/raw_{split_id}_{safe_name}"
+    with open(temp_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    try:
+        chunks = split_pcap_by_size(temp_path, size_limit_mb=600)
+        final_chunks = []
+        for c in chunks:
+            new_path = f"{c}{ext}"
+            os.rename(c, new_path)
+            fname = os.path.basename(new_path)
+            final_chunks.append({
+                "original_filename": file.filename,
+                "chunk_filename": fname,
+                "download_url": f"/download-split/{fname}"
+            })
+        return {"status": "success", "chunks": final_chunks}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(temp_path): os.remove(temp_path)
+
+@app.get("/download-split/{filename:path}")
+def download_split_file(filename: str):
+    if not filename.startswith("split_"):
+         raise HTTPException(status_code=403, detail="Security violation")
+    path = f"/tmp/{filename}"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Not found")
+    def iterfile():
+        with open(path, "rb") as f:
+            yield from f
+    return StreamingResponse(
+        iterfile(),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+    )

@@ -7,4 +7,5 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      - ./backend:/app/backend
       - ./shared_data:/data
