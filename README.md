@@ -4,6 +4,10 @@ A network traffic analysis platform designed to process PCAP files, detect suspi
 
 This system was developed as part of a cybersecurity research and industry collaboration project focused on **advanced network monitoring, behavioral analysis, and threat detection**.
 
+> [!IMPORTANT]
+> **Professional Use & Authorization Disclaimer**  
+> This tool is intended for professional security analysis and research purposes only. It must be used exclusively by authorized individuals on networks and data for which they have explicit permission to monitor and analyze. Unauthorized use of this tool against systems without consent may be illegal and unethical.
+
 ---
 
 # Table of Contents
@@ -212,8 +216,8 @@ For analyzing larger PCAP files or running multiple analyses in parallel:
 - Network: Internet connection for threat intelligence lookups (VirusTotal API)
 
 ### Notes
-- Large PCAP files (>1 GB) may require additional memory depending on analysis complexity.
-- Running Suricata IDS and the analysis engine simultaneously may increase CPU utilization.
+- Large PCAP files (>650 MB) trigger the Enterprise Safety Gateway for automated partitioning.
+- PCAP files between 600 MB and 650 MB can be analyzed directly but may experience slightly longer processing times depending on hardware.
 - SSD storage is recommended for faster packet parsing and analysis operations.
 
 ---

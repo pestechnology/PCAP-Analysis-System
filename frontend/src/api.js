@@ -124,10 +124,11 @@ export async function finalizeUpload(uploadId, filename, advanced = false) {
     return response.json();
 }
 
-export async function splitPCAP(file) {
+export async function splitPCAP(file, prefix = "") {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await fetch("/split-pcap", {
+    const url = prefix ? `/split-pcap?prefix=${encodeURIComponent(prefix)}` : "/split-pcap";
+    const response = await fetch(url, {
         method: "POST",
         body: formData
     });
