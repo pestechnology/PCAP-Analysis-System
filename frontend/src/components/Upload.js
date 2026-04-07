@@ -24,6 +24,7 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
     const [isSplitting, setIsSplitting] = useState(false);
     const [splitChunks, setSplitChunks] = useState([]);
     const [pendingFile, setPendingFile] = useState(null);
+    const [customPrefix, setCustomPrefix] = useState("");
     const pollRef = useRef(null);
 
     const allowedExtensions = [
@@ -57,7 +58,7 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
 
         const sizeMB = selected.size / (1024 * 1024);
 
-        if (sizeMB > 600) {
+        if (sizeMB > 650) {
             setPendingFile(selected);
             setShowSplitModal(true);
             setSplitChunks([]);
@@ -73,7 +74,7 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
         if (!pendingFile) return;
         setIsSplitting(true);
         try {
-            const result = await splitPCAP(pendingFile);
+            const result = await splitPCAP(pendingFile, customPrefix);
             setSplitChunks(result.chunks || []);
         } catch (err) {
             console.error(err);
@@ -207,7 +208,7 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                         position: 'relative'
                     }}>
                         <button 
-                            onClick={() => { setShowSplitModal(false); setPendingFile(null); }}
+                            onClick={() => { setShowSplitModal(false); setPendingFile(null); setCustomPrefix(""); }}
                             style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                         >
                             <X size={20} />
@@ -224,12 +225,38 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                         </div>
 
                         <p style={{ color: 'var(--text-secondary)', fontSize: '15px', lineHeight: 1.6, marginBottom: '32px' }}>
-                            The file <strong style={{ color: 'var(--text-primary)' }}>{pendingFile?.name}</strong> is <strong>{(pendingFile?.size / (1024 * 1024)).toFixed(1)} MB</strong>, which exceeds the 600MB analysis threshold. To ensure packet integrity and deep inspection stability, please choose an action:
+                            The file <strong style={{ color: 'var(--text-primary)' }}>{pendingFile?.name}</strong> is <strong>{(pendingFile?.size / (1024 * 1024)).toFixed(1)} MB</strong>, which exceeds the stability threshold (650MB). To ensure packet integrity and deep inspection reliability, please choose an action:
                         </p>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             {splitChunks.length === 0 ? (
                                 <>
+                                    <div style={{ marginBottom: '12px' }}>
+                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                            Custom Chunk Prefix (Optional)
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="e.g. Security_Audit"
+                                            value={customPrefix}
+                                            onChange={(e) => setCustomPrefix(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '14px 16px',
+                                                background: 'rgba(255,255,255,0.03)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                borderRadius: '10px',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '14px',
+                                                outline: 'none',
+                                                transition: 'border-color 0.2s',
+                                                boxSizing: 'border-box'
+                                            }}
+                                            onFocus={e => e.target.style.borderColor = 'var(--accent-orange)'}
+                                            onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                                        />
+                                    </div>
+
                                     <button 
                                         onClick={handleAutoSplit}
                                         disabled={isSplitting}
@@ -317,7 +344,7 @@ export default function Upload({ onResult, currentFilename, currentMode }) {
                                         ))}
                                     </div>
                                     <button 
-                                        onClick={() => { setShowSplitModal(false); setPendingFile(null); setSplitChunks([]); }}
+                                        onClick={() => { setShowSplitModal(false); setPendingFile(null); setSplitChunks([]); setCustomPrefix(""); }}
                                         style={{ 
                                             marginTop: '20px', 
                                             width: '100%', 

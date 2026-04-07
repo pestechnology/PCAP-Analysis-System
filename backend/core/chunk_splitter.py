@@ -2,9 +2,12 @@ import subprocess
 import os
 import uuid
 
-def split_pcap_by_size(file_path, size_limit_mb=600):
+def split_pcap_by_size(file_path, size_limit_mb=600, custom_prefix=None):
     job_id = uuid.uuid4().hex
-    output_prefix = f"/tmp/split_{job_id}"
+    if custom_prefix:
+        output_prefix = f"/tmp/{custom_prefix}"
+    else:
+        output_prefix = f"/tmp/split_{job_id}"
     
     cmd = [
         "tcpdump",

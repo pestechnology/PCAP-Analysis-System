@@ -244,11 +244,16 @@ def enrich_ip(ip: str):
     return check_ip_reputation(ip)
 
 @app.post("/split-pcap")
-async def split_pcap_endpoint(file: UploadFile = File(...)):
+async def split_pcap_endpoint(file: UploadFile = File(...), prefix: str = Query(None)):
     split_id = str(uuid.uuid4().hex)[:8]
     ext = ".pcap"
     if file.filename.lower().endswith(".pcapng"): ext = ".pcapng"
     elif file.filename.lower().endswith(".cap"): ext = ".cap"
+    
+    # Sanitize custom prefix
+    safe_prefix = None
+    if prefix:
+        safe_prefix = "".join([c for c in prefix if c.isalnum() or c in "._-"])[:50]
     
     safe_name = "".join([c for c in file.filename if c.isalnum() or c in "._-"])
     temp_path = f"/tmp/raw_{split_id}_{safe_name}"
@@ -256,7 +261,7 @@ async def split_pcap_endpoint(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
     
     try:
-        chunks = split_pcap_by_size(temp_path, size_limit_mb=600)
+        chunks = split_pcap_by_size(temp_path, size_limit_mb=600, custom_prefix=safe_prefix)
         final_chunks = []
         for c in chunks:
             new_path = f"{c}{ext}"
@@ -275,8 +280,14 @@ async def split_pcap_endpoint(file: UploadFile = File(...)):
 
 @app.get("/download-split/{filename:path}")
 def download_split_file(filename: str):
-    if not filename.startswith("split_"):
+    # Prevent path traversal by only allowing direct filenames (no slashes or dots)
+    if "/" in filename or "\\" in filename or ".." in filename:
          raise HTTPException(status_code=403, detail="Security violation")
+    
+    # Ensure it's a known capture extension for safety
+    exts = [".pcap", ".pcapng", ".cap", ".pcap.gz", ".pcapng.gz"]
+    if not any(filename.lower().endswith(e) for e in exts):
+         raise HTTPException(status_code=403, detail="Security violation: Invalid file type")
     path = f"/tmp/{filename}"
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="Not found")

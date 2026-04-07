@@ -13,6 +13,7 @@ from backend.core.udp_analysis import analyze_udp_behavior
 from backend.core.credential_extractor import extract_credentials
 from backend.core.file_extractor import extract_files_metadata
 from backend.core.http_extractor import extract_http_transactions
+import orjson
 
 analysis_progress = {}
 
@@ -20,12 +21,11 @@ def get_result_path(job_id):
     return f"/tmp/{job_id}_result.json"
 
 def save_result_to_disk(job_id, data):
-    import orjson
+
     with open(get_result_path(job_id), "wb") as f:
         f.write(orjson.dumps(data))
 
 def load_result_from_disk(job_id):
-    import orjson
     path = get_result_path(job_id)
     if not os.path.exists(path):
         return None

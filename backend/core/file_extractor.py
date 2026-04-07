@@ -2,7 +2,6 @@ import subprocess
 import os
 import shutil
 import tempfile
-import uuid
 
 def extract_files_metadata(file_path):
     """
