@@ -1,145 +1,296 @@
+# © Copyright 2026 Mohit Pal
+# Licensed under the MIT;
+# you may not use this file except in compliance with the License.
+# SPDX-License-Identifier: MIT
+
 import subprocess
-import os
 import re
 
 def extract_credentials(file_path):
-    results = []
+    """
+    Extracts credentials from a PCAP file using two complementary strategies:
+    1. tshark -z credentials  -> High-level credential summary
+    2. tshark -T fields       -> Per-packet field extraction for FTP/HTTP/IMAP/SMTP etc.
 
-    cmd_z = ["tshark", "-r", file_path, "-q", "-z", "credentials"]
+    Results from both strategies are merged using a session-signature key that combines
+    sorted-IP pair + protocol + tcp.stream to ensure username & password packets in
+    different packets are always paired correctly.
+    """
+
+    # ===========================================================================
+    # SESSION STATE - keyed by (protocol, stream_id)
+    # Each entry accumulates username and password_snippet from all packets
+    # ===========================================================================
+    sessions = {}  # key -> {"client", "server", "username", "password_snippet"}
+
+    def _sig(proto, stream, src, dst):
+        """Produce a stable session key regardless of packet direction."""
+        proto = str(proto).upper().strip()
+        stream = str(stream).strip()
+        pair = tuple(sorted([str(src).strip(), str(dst).strip()]))
+        # Primary key uses stream ID; secondary key uses IPs for cross-pass linking
+        return (proto, stream, pair[0], pair[1])
+
+    def _update(proto, src, dst, stream, username=None, password=None):
+        """Upsert into the session state with data-greedy priority."""
+        key = _sig(proto, stream, src, dst)
+        if key not in sessions:
+            sessions[key] = {
+                "protocol": str(proto).upper().strip(),
+                "client": src or "Unknown",
+                "server": dst or "Unknown",
+                "stream": stream or "0",
+                "username": "Unknown",
+                "password_snippet": "N/A"
+            }
+
+        sess = sessions[key]
+
+        # Resolve IPs if current session has Unknown
+        if sess["client"] == "Unknown" and src and src != "Unknown":
+            sess["client"] = src
+        if sess["server"] == "Unknown" and dst and dst != "Unknown":
+            sess["server"] = dst
+
+        # Update username if the new value is better (not Unknown/empty)
+        if username:
+            u = str(username).strip()
+            if u and u.upper() not in ("UNKNOWN", "N/A", "USER", ""):
+                sess["username"] = u
+
+        # Update password if the new value is better (not N/A/empty)
+        if password:
+            p = str(password).strip()
+            if p and p.upper() not in ("N/A", "UNKNOWN", ""):
+                sess["password_snippet"] = p
+
+    # ===========================================================================
+    # STRATEGY 1 - tshark -z credentials
+    # ===========================================================================
     try:
-        out_z = subprocess.run(cmd_z, capture_output=True, text=True, timeout=180)
-        lines = out_z.stdout.splitlines()
-        
-        creds_z = []
+        cmd_z = ["tshark", "-r", file_path, "-q", "-z", "credentials"]
+        out_z = subprocess.run(cmd_z, capture_output=True, text=True, timeout=300)
+
         parsing = False
-        
-        for line in lines:
+        for line in out_z.stdout.splitlines():
             if line.startswith("------"):
                 parsing = True
                 continue
             if parsing and line.startswith("======"):
                 break
-            if parsing and line.strip():
+            if not (parsing and line.strip()):
+                continue
+
+            # Format: PacketNum  Protocol  Username  Info
+            parts = re.split(r'\s{2,}', line.strip(), maxsplit=3)
+            if len(parts) < 2:
                 parts = re.split(r'\s+', line.strip(), maxsplit=3)
-                if len(parts) >= 3:
-                    packet_num = parts[0]
-                    protocol = parts[1]
-                    username = parts[2]
-                    info = parts[3] if len(parts) > 3 else ""
-                    
-                    if packet_num.isdigit():
-                        creds_z.append({
-                            "packet": packet_num,
-                            "protocol": protocol,
-                            "username": username,
-                            "info": info
-                        })
-        
-        if creds_z:
-            packet_nums = [c["packet"] for c in creds_z]
-            filter_str = " || ".join([f"frame.number=={num}" for num in packet_nums])
-            if len(packet_nums) > 100:
-                filter_str = "ftp or http or pop or imap or smtp or telnet"
-                
+            if len(parts) < 2 or not parts[0].isdigit():
+                continue
+
+            pkt_num = parts[0].strip()
+            protocol = parts[1].strip().upper() if len(parts) > 1 else ""
+            raw_user = parts[2].strip() if len(parts) > 2 else ""
+            raw_info = parts[3].strip() if len(parts) > 3 else ""
+
+            username = raw_user
+            password = raw_info
+
+            # FTP special handling: sometimes the "username" column holds the command
+            if protocol == "FTP":
+                cmd_upper = raw_user.upper()
+                if "USER" in cmd_upper:
+                    # e.g. raw_user="USER", raw_info="pedophile@..."
+                    username = raw_info
+                    password = None
+                elif "PASS" in cmd_upper:
+                    # e.g. raw_user="PASS", raw_info="thepassword"
+                    password = raw_info
+                    username = None
+                else:
+                    # Try cleaning standard "Password: X" prefix from info
+                    pm = re.search(r'(?:Password|Pass)[: ]+(.+)', raw_info, re.I)
+                    if pm:
+                        password = pm.group(1).strip()
+
+            # Get IP/stream for this packet number
             ip_cmd = [
                 "tshark", "-r", file_path,
-                "-Y", filter_str,
+                "-Y", f"frame.number=={pkt_num}",
+                "-2",
                 "-T", "fields",
                 "-E", "separator=|",
-                "-e", "frame.number", "-e", "ip.src", "-e", "ip.dst", "-e", "tcp.stream", "-e", "udp.stream"
+                "-e", "ip.src", "-e", "ip.dst", "-e", "tcp.stream", "-e", "udp.stream"
             ]
-            ip_out = subprocess.run(ip_cmd, capture_output=True, text=True, timeout=60)
-            
-            p_map = {}
-            for line in ip_out.stdout.splitlines():
-                parts = line.strip().split("|")
-                if len(parts) >= 5:
-                    frame, src, dst, ts, us = parts[0], parts[1], parts[2], parts[3], parts[4]
-                    if frame: p_map[frame] = {"src": src, "dst": dst, "stream": ts or us or "0"}
-                        
-            for c in creds_z:
-                frame = c["packet"]
-                meta = p_map.get(frame, {"src": "Unknown", "dst": "Unknown", "stream": "0"})
-                
-                raw_usr = c["username"]
-                raw_info = str(c.get("info", ""))
-                
-                clean_pwd = re.sub(r'^(Password|Pass):\s*', '', raw_info, flags=re.I)
-                clean_pwd = re.sub(r'Username in packet:\s*\d+', '', clean_pwd, flags=re.I).strip()
-                
-                clean_usr = re.sub(r'Username in packet:\s*\d+', '', raw_usr, flags=re.I).strip()
-                clean_usr = re.sub(r'^Username:\s*', '', clean_usr, flags=re.I)
-
-                results.append({
-                    "protocol": c["protocol"].upper(),
-                    "client": meta["src"],
-                    "server": meta["dst"],
-                    "stream": meta["stream"],
-                    "username": clean_usr if clean_usr else "Unknown",
-                    "password_snippet": clean_pwd if clean_pwd else "N/A"
-                })
-    except:
+            try:
+                ip_out = subprocess.run(ip_cmd, capture_output=True, text=True, timeout=30)
+                for ip_line in ip_out.stdout.splitlines():
+                    ip_parts = [p.strip() for p in ip_line.strip().split("|")]
+                    if len(ip_parts) >= 4:
+                        src, dst = ip_parts[0], ip_parts[1]
+                        stream = ip_parts[2] or ip_parts[3] or pkt_num
+                        _update(protocol, src, dst, stream, username, password)
+                        break
+            except Exception:
+                # If IP lookup fails, store with packet number as stream
+                _update(protocol, "Unknown", "Unknown", pkt_num, username, password)
+    except Exception:
         pass
 
-    cmd_f = [
-        "tshark", "-r", file_path,
-        "-Y", "ntlmssp.auth.username || pgsql.password || ldap.name || kerberos.name_string || tds.login.user_name || snmp.community || sip.auth.username || ftp.user || ftp.pass || http.authorization || imap.user || imap.pass || smtp.auth.username || smtp.auth.password || ftp.request.command || ftp.request.arg",
-        "-T", "fields",
-        "-E", "separator=|",
-        "-e", "ip.src", "-e", "ip.dst", "-e", "tcp.stream", "-e", "udp.stream",
-        "-e", "ntlmssp.auth.username", "-e", "ntlmssp.auth.domain",
-        "-e", "pgsql.user", "-e", "pgsql.password",
-        "-e", "ldap.name", "-e", "kerberos.name_string",
-        "-e", "tds.login.user_name", "-e", "snmp.community",
-        "-e", "sip.auth.username", "-e", "ftp.user", "-e", "ftp.pass",
-        "-e", "http.authorization", "-e", "imap.user", "-e", "imap.pass",
-        "-e", "smtp.auth.username", "-e", "smtp.auth.password",
-        "-e", "ftp.request.command", "-e", "ftp.request.arg"
-    ]
+    # ===========================================================================
+    # STRATEGY 2 - tshark field-by-field extraction (covers ALL FTP packets)
+    # ===========================================================================
     try:
-        out_f = subprocess.run(cmd_f, capture_output=True, text=True, timeout=120)
+        cmd_f = [
+            "tshark", "-r", file_path,
+            "-2",
+            "-Y", "ftp || http.authorization || ntlmssp || pgsql || ldap || kerberos || tds || snmp || sip || imap || smtp",
+            "-T", "fields",
+            "-E", "separator=|",
+            # Network
+            "-e", "ip.src",               # 0
+            "-e", "ip.dst",               # 1
+            "-e", "tcp.stream",           # 2
+            "-e", "udp.stream",           # 3
+            # SMB/NTLM
+            "-e", "ntlmssp.auth.username",# 4
+            "-e", "ntlmssp.auth.domain",  # 5
+            # Postgres
+            "-e", "pgsql.user",           # 6
+            "-e", "pgsql.password",       # 7
+            # LDAP / Kerberos
+            "-e", "ldap.name",            # 8
+            "-e", "kerberos.name_string", # 9
+            # MSSQL
+            "-e", "tds.login.user_name",  # 10
+            # SNMP
+            "-e", "snmp.community",       # 11
+            # SIP
+            "-e", "sip.auth.username",    # 12
+            # FTP high-level username/password fields
+            "-e", "ftp.user",             # 13
+            "-e", "ftp.pass",             # 14
+            # HTTP
+            "-e", "http.authorization",   # 15
+            # IMAP
+            "-e", "imap.user",            # 16
+            "-e", "imap.pass",            # 17
+            # SMTP
+            "-e", "smtp.auth.username",   # 18
+            "-e", "smtp.auth.password",   # 19
+            # FTP raw command/arg
+            "-e", "ftp.request.command",  # 20
+            "-e", "ftp.request.arg",      # 21
+            # FTP auth extension fields
+            "-e", "ftp.auth_user",        # 22
+            "-e", "ftp.auth_pass",        # 23
+            # Additional FTP variant fields
+            "-e", "ftp.password",         # 24
+            "-e", "ftp.arg",              # 25
+        ]
+
+        out_f = subprocess.run(cmd_f, capture_output=True, text=True, timeout=600)
+
         for line in out_f.stdout.splitlines():
-            parts = line.strip().split("|")
-            while len(parts) < 23: parts.append("")
-            src, dst, stream = parts[0], parts[1], (parts[2] or parts[3] or "0")
-            
-            def add_f(proto, user, pwd):
-                if user or pwd:
-                    results.append({
-                        "protocol": proto, "client": src, "server": dst, "stream": stream,
-                        "username": user or "Unknown", "password_snippet": str(pwd) if pwd else "N/A"
-                    })
-            if parts[4]: add_f("SMB", parts[4], f"Domain: {parts[5]}" if parts[5] else "Hash")
-            if parts[6] or parts[7]: add_f("PostgreSQL", parts[6], parts[7])
-            if parts[8]: add_f("LDAP", parts[8], "Auth Req")
-            if parts[9]: add_f("Kerberos", parts[9], "Ticket")
-            if parts[10]: add_f("MSSQL", parts[10], "Login")
-            if parts[11]: add_f("SNMP", "public", parts[11])
-            if parts[12]: add_f("SIP", parts[12], "Digest")
-            if parts[13] or parts[14]: add_f("FTP", parts[13], parts[14])
-            if parts[15]: add_f("HTTP", "Authorized", parts[15])
-            if parts[16] or parts[17]: add_f("IMAP", parts[16], parts[17])
-            if parts[18] or parts[19]: add_f("SMTP", parts[18], parts[19])
-            
-            f_cmd, f_arg = parts[20].upper(), parts[21]
-            if f_cmd == "USER": add_f("FTP", f_arg, "N/A")
-            elif f_cmd == "PASS": add_f("FTP", "Unknown", f_arg)
-    except:
+            p = [x.strip() for x in line.strip().split("|")]
+            while len(p) < 26:
+                p.append("")
+
+            src, dst = p[0], p[1]
+            stream = p[2] or p[3] or "0"
+
+            # --- SMB/NTLM ---
+            if p[4]:
+                _update("SMB", src, dst, stream, p[4], f"Domain: {p[5]}" if p[5] else "Hash")
+
+            # --- PostgreSQL ---
+            if p[6] or p[7]:
+                _update("PostgreSQL", src, dst, stream, p[6], p[7])
+
+            # --- LDAP ---
+            if p[8]:
+                _update("LDAP", src, dst, stream, p[8], "Auth Req")
+
+            # --- Kerberos ---
+            if p[9]:
+                _update("Kerberos", src, dst, stream, p[9], "Ticket")
+
+            # --- MSSQL ---
+            if p[10]:
+                _update("MSSQL", src, dst, stream, p[10], "Login")
+
+            # --- SNMP ---
+            if p[11]:
+                _update("SNMP", src, dst, stream, "public", p[11])
+
+            # --- SIP ---
+            if p[12]:
+                _update("SIP", src, dst, stream, p[12], "Digest")
+
+            # --- FTP: aggregate every possible field combination ---
+            f_cmd  = p[20].upper()  # e.g. "USER" or "PASS"
+            f_arg  = p[21]          # ftp.request.arg
+            f_alt  = p[25]          # ftp.arg
+
+            if "USER" in f_cmd:
+                # This packet carries the username
+                usr = f_arg or f_alt or p[13] or p[22]
+                if usr:
+                    _update("FTP", src, dst, stream, username=usr)
+
+            elif "PASS" in f_cmd:
+                # This packet carries the password - check all possible fields
+                pwd = f_arg or f_alt or p[14] or p[24] or p[23]
+                if pwd:
+                    _update("FTP", src, dst, stream, password=pwd)
+
+            else:
+                # No explicit command - check direct username/password fields
+                ftp_u = p[13] or p[22]
+                ftp_p = p[14] or p[24] or p[23]
+                if ftp_u or ftp_p:
+                    _update("FTP", src, dst, stream, ftp_u, ftp_p)
+
+            # --- HTTP ---
+            if p[15]:
+                _update("HTTP", src, dst, stream, "Authorized", p[15])
+
+            # --- IMAP ---
+            if p[16] or p[17]:
+                _update("IMAP", src, dst, stream, p[16], p[17])
+
+            # --- SMTP ---
+            if p[18] or p[19]:
+                _update("SMTP", src, dst, stream, p[18], p[19])
+
+    except Exception:
         pass
 
-    merged = {}
-    for c in results:
-        key = (c["protocol"], c["stream"])
-        if key not in merged:
-            merged[key] = c
+    # ===========================================================================
+    # FINAL DEDUPLICATION
+    # Group records with the same (protocol, stream) pair and merge the best data
+    # ===========================================================================
+    # Second-pass merge: link sessions that share (proto, stream) but differ in IPs
+    # (can happen when one lookup resolved IPs and another did not)
+    final_map = {}
+    for key, sess in sessions.items():
+        proto = key[0]
+        stream = key[1]
+        simple_key = (proto, stream)
+        if simple_key not in final_map:
+            final_map[simple_key] = dict(sess)
         else:
-            m = merged[key]
-            if c["username"] != "Unknown" and m["username"] == "Unknown":
-                m["username"] = c["username"]
-            if c["password_snippet"] != "N/A" and m["password_snippet"] == "N/A":
-                m["password_snippet"] = c["password_snippet"]
-            
-            if m["client"] == "Unknown" and c["client"] != "Unknown":
-                m["client"], m["server"] = c["client"], c["server"]
-    
-    return [v for v in merged.values()]
+            m = final_map[simple_key]
+            # Upgrade IPs
+            if m["client"] == "Unknown" and sess["client"] != "Unknown":
+                m["client"] = sess["client"]
+            if m["server"] == "Unknown" and sess["server"] != "Unknown":
+                m["server"] = sess["server"]
+            # Upgrade username
+            if m["username"] in ("Unknown", "") and sess["username"] not in ("Unknown", ""):
+                m["username"] = sess["username"]
+            # Upgrade password
+            if m["password_snippet"] in ("N/A", "") and sess["password_snippet"] not in ("N/A", ""):
+                m["password_snippet"] = sess["password_snippet"]
+
+    return list(final_map.values())

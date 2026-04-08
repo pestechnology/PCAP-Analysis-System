@@ -1,3 +1,9 @@
+/*
+© Copyright 2026 Mohit Pal
+Licensed under the MIT;
+you may not use this file except in compliance with the License.
+SPDX-License-Identifier: MIT
+*/
 import DomainsCard from "../components/DomainsCard";
 import UrlsCard from "../components/UrlsCard";
 import MacVendorCard from "../components/MacVendorCard";

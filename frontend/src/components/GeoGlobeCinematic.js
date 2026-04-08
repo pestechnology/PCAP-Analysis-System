@@ -1,3 +1,9 @@
+/*
+© Copyright 2026 Mohit Pal
+Licensed under the MIT;
+you may not use this file except in compliance with the License.
+SPDX-License-Identifier: MIT
+*/
 import React, { useRef, useState, useMemo } from "react";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, Html } from "@react-three/drei";
