@@ -1,3 +1,9 @@
+/*
+© Copyright 2026 Mohit Pal
+Licensed under the MIT;
+you may not use this file except in compliance with the License.
+SPDX-License-Identifier: MIT
+*/
 import React, { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";

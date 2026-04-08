@@ -1,3 +1,8 @@
+# © Copyright 2026 Mohit Pal
+# Licensed under the MIT;
+# you may not use this file except in compliance with the License.
+# SPDX-License-Identifier: MIT
+
 """
 Covers:
   - Link-layer type / data-link type detection (Ethernet, Wi-Fi, Loopback, etc.)
@@ -14,6 +19,8 @@ Design principles:
   - Returns sensible empty structures on any failure so the frontend
     always receives well-typed data.
 """
+
+
 
 import subprocess
 from collections import Counter, defaultdict

@@ -1,3 +1,8 @@
+# © Copyright 2026 Mohit Pal
+# Licensed under the MIT;
+# you may not use this file except in compliance with the License.
+# SPDX-License-Identifier: MIT
+
 from collections import Counter, defaultdict
 import ipaddress
 import geoip2.database
