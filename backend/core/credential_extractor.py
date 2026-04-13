@@ -1,7 +1,19 @@
-# © Copyright 2026 Mohit Pal
-# Licensed under the MIT;
+# © Copyright 2026 PES University.
+#
+# Authors:
+#   Mohit Pal - mp65742@gmail.com
+#   Swetha P - swethap@pes.edu
+#
+# Contributors:
+#   PurpleSynapz
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# SPDX-License-Identifier: MIT
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
 
 import subprocess
 import re
@@ -262,6 +274,45 @@ def extract_credentials(file_path):
             # --- SMTP ---
             if p[18] or p[19]:
                 _update("SMTP", src, dst, stream, p[18], p[19])
+
+    except Exception:
+        pass
+
+    # ===========================================================================
+    # STRATEGY 3 - Dedicated FTP USER/PASS correlator
+    # Runs a single focused query targeting only FTP request packets.
+    # Pairs USER and PASS commands from separate packets via tcp.stream.
+    # This is the most reliable method for FTP two-packet authentication.
+    # ===========================================================================
+    try:
+        ftp_cmd = [
+            "tshark", "-r", file_path,
+            "-Y", "ftp.request",
+            "-T", "fields",
+            "-E", "separator=|",
+            "-e", "ip.src",
+            "-e", "ip.dst",
+            "-e", "tcp.stream",
+            "-e", "ftp.request.command",
+            "-e", "ftp.request.arg",
+        ]
+        ftp_out = subprocess.run(ftp_cmd, capture_output=True, text=True, timeout=300)
+
+        for line in ftp_out.stdout.splitlines():
+            parts = [x.strip() for x in line.strip().split("|")]
+            if len(parts) < 5:
+                continue
+            src, dst, stream = parts[0], parts[1], parts[2]
+            cmd = parts[3].upper()
+            arg = parts[4]
+
+            if not stream or not cmd or not arg:
+                continue
+
+            if cmd == "USER":
+                _update("FTP", src, dst, stream, username=arg)
+            elif cmd == "PASS":
+                _update("FTP", src, dst, stream, password=arg)
 
     except Exception:
         pass

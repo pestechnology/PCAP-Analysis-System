@@ -1,7 +1,19 @@
-# © Copyright 2026 Mohit Pal
-# Licensed under the MIT;
+# © Copyright 2026 PES University.
+#
+# Authors:
+#   Mohit Pal - mp65742@gmail.com
+#   Swetha P - swethap@pes.edu
+#
+# Contributors:
+#   PurpleSynapz
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
-# SPDX-License-Identifier: MIT
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0
 
 import os
 import multiprocessing
@@ -18,6 +30,8 @@ from backend.core.udp_analysis import analyze_udp_behavior
 from backend.core.credential_extractor import extract_credentials
 from backend.core.file_extractor import extract_files_metadata
 from backend.core.http_extractor import extract_http_transactions
+from backend.core.forensic_scorer import compute_fcs
+from backend.utils.system_info import get_host_system_info
 import orjson
 
 analysis_progress = {}
@@ -206,9 +220,19 @@ def analyze_parallel(file_path, chunk_packets=None, _job_id_override=None):
 
     analysis_progress[job_id]["current_stage"] = "Finalizing capture metadata…"
     analysis_progress[job_id]["percent"] = 97
-    
+
     metadata = get_capture_metadata(file_path)
     merged_result.setdefault("http_threats", [])
+
+    # -----------------------------------------------
+    # CROSS-LAYER SIGNAL FUSION — FORENSIC CONFIDENCE
+    # -----------------------------------------------
+    analysis_progress[job_id]["current_stage"] = "Computing Forensic Confidence Score…"
+    analysis_progress[job_id]["percent"] = 98
+
+    hardware_ctx = get_host_system_info()
+    forensic_score = compute_fcs(merged_result, hardware_ctx)
+    merged_result["forensic_score"] = forensic_score
 
     final_result = {
         "capture_metadata": metadata,

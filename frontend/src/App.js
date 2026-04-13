@@ -1,9 +1,21 @@
 /*
-© Copyright 2026 Mohit Pal
-Licensed under the MIT;
-you may not use this file except in compliance with the License.
-SPDX-License-Identifier: MIT
-*/
+ * © Copyright 2026 PES University.
+ *
+ * Authors:
+ *   Mohit Pal - mp65742@gmail.com
+ *   Swetha P - swethap@pes.edu
+ *
+ * Contributors:
+ *   PurpleSynapz
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 
 import React, { useState, useEffect } from "react";
@@ -19,6 +31,7 @@ import PacketDetailPage from "./pages/PacketDetailPage";
 import Sidebar from "./components/Sidebar";
 import Home from "./pages/Home";
 import DownloadReportButton from "./components/DownloadReportButton";
+import Forensic from "./pages/Forensic";
 
 function MainLayout({ data, setData }) {
     return (
@@ -118,6 +131,7 @@ export default function App() {
                     <Route path="/protocols" element={<Protocols data={data} />} />
                     <Route path="/intelligence" element={<Intelligence data={data} />} />
                     <Route path="/content" element={<Content data={data} />} />
+                    <Route path="/forensic" element={<Forensic data={data} />} />
                     <Route path="/packets/:protocol" element={<Packets data={data} />} />
                     <Route path="/protocol/:protocol" element={<Packets data={data} />} />
                     <Route path="/packet/:id" element={<PacketDetailPage />} />
