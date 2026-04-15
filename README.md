@@ -4,9 +4,6 @@ A network traffic analysis platform designed to process PCAP files, detect suspi
 
 This system was developed as part of a cybersecurity research and industry collaboration project focused on **advanced network monitoring, behavioral analysis, and threat detection**.
 
-> [!IMPORTANT]
-> **Professional Use & Authorization Disclaimer**  
-> This tool is intended for professional security analysis and research purposes only. It must be used exclusively by authorized individuals on networks and data for which they have explicit permission to monitor and analyze. Unauthorized use of this tool against systems without consent may be illegal and unethical.
 
 ---
 
@@ -507,6 +504,20 @@ docker compose up
 
 ---
 
-## License
+# © Copyright 2026 PES University.
 
-This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
+## Authors:
+ ###### Mohit Pal - mp65742@gmail.com
+ ###### Dr. Swetha P - swethap@pes.edu
+ ###### Dr. Prasad B Honnavalli - prasadhb@pes.edu
+
+## Contributors:
+ ###### PurpleSynapz - info@purplesynapz.com 
+ Licensed under the Apache License, Version 2.0 (the "License"); 
+ You may not use this file except in compliance with the License.
+ You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ ###### SPDX-License-Identifier: Apache-2.0
+
+---
+
+For further queries related to the project/application, reach out to ISFCR, PES University - office.isfcr@pes.edu

@@ -3,10 +3,11 @@
  *
  * Authors:
  *   Mohit Pal - mp65742@gmail.com
- *   Swetha P - swethap@pes.edu
+ *   Dr. Swetha P - swethap@pes.edu
+ *   Dr. Prasad B Honnavalli - prasadhb@pes.edu
  *
  * Contributors:
- *   PurpleSynapz
+ *   PurpleSynapz - info@purplesynapz.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +17,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
 
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate, Outlet, Navigate } from "react-router-dom";
