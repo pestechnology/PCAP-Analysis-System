@@ -24,6 +24,10 @@ This system was developed as part of a cybersecurity research and industry colla
 - [Threat Detection Pipeline](#threat-detection-pipeline)
 - [GeoIP & Intelligence Integration](#geoip--intelligence-integration)
 - [VirusTotal API Configuration](#virustotal-api-configuration)
+- [Contributing](#contributing)
+- [Code of Conduct](#code-of-conduct)
+- [Security Policy](#security-policy)
+- [Community & Support](#community--support)
 
 ---
 
@@ -501,6 +505,77 @@ docker compose up
 - The `.env` file should **not be committed to Git**.
 - Ensure `.env` is included in `.gitignore`.
 - Without the VirusTotal API key, **threat intelligence enrichment features will not function**.
+
+---
+
+# Contributing
+
+We welcome contributions from the community! Whether it's bug reports, feature requests, documentation improvements, or code contributions, all input is valued.
+
+Please read our full **[Contributing Guidelines](CONTRIBUTING.md)** before submitting any contribution.
+
+### Quick Start
+
+1. **Fork** the repository and create your branch from `main`.
+2. **Follow** the coding style and project structure already in place.
+3. **Write clear commit messages** describing *what* and *why*.
+4. **Test** your changes thoroughly before opening a pull request.
+5. **Open a Pull Request** — fill in the provided template and link any related issues.
+
+### Reporting Bugs
+
+Open a [GitHub Issue](https://github.com/MohitPal0212/pcap_analysis_system/issues) and include:
+- A clear, descriptive title
+- Steps to reproduce the issue
+- Expected vs. actual behavior
+- PCAP sample (if applicable and shareable) and environment details
+
+### Suggesting Features
+
+Open a GitHub Issue with the `enhancement` label. Describe the problem being solved, the proposed solution, and any alternatives considered.
+
+---
+
+# Code of Conduct
+
+This project follows the **[Contributor Covenant Code of Conduct v2.1](CODE_OF_CONDUCT.md)**.
+
+All participants in this project — contributors, maintainers, and users — are expected to uphold a welcoming, respectful, and harassment-free environment.
+
+**Our pledge:** We pledge to make participation in this community a harassment-free experience for everyone, regardless of age, body size, disability, ethnicity, gender identity, level of experience, nationality, personal appearance, race, religion, or sexual identity.
+
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project maintainers at **mp65742@gmail.com** or **office.isfcr@pes.edu**.
+
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for the full text.
+
+---
+
+# Security Policy
+
+We take security seriously. If you discover a vulnerability in this project, **please do not open a public GitHub Issue.**
+
+Instead, report it responsibly by following our **[Security Policy](SECURITY.md)**.
+
+### Reporting a Vulnerability
+
+- **Email:** mp65742@gmail.com (Subject: `[SECURITY] <brief description>`)
+- **Response SLA:** We aim to acknowledge reports within **48 hours** and provide a resolution timeline within **7 days**.
+- Reporters who responsibly disclose vulnerabilities will be credited in the release notes.
+
+See [SECURITY.md](SECURITY.md) for supported versions, scope, and the full disclosure process.
+
+---
+
+# Community & Support
+
+| Channel | Purpose |
+|---|---|
+| [GitHub Issues](https://github.com/MohitPal0212/pcap_analysis_system/issues) | Bug reports & feature requests |
+| [GitHub Discussions](https://github.com/MohitPal0212/pcap_analysis_system/discussions) | General questions, ideas, and community chat |
+| **Email** — office.isfcr@pes.edu | Academic & research collaboration inquiries |
+| **Email** — mp65742@gmail.com | Direct maintainer contact |
+
+> **Note:** This project is developed and maintained as part of cybersecurity research at PES University (ISFCR). Response times may vary during academic periods.
 
 ---
 
