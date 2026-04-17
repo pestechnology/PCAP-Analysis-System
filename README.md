@@ -275,8 +275,8 @@ For analyzing larger PCAP files or running multiple analyses in parallel:
 ## 1 Clone the Repository
 
 ```
-git clone https://github.com/MohitPal0212/pcap_analysis_system.git
-cd pcap_analysis_system
+git clone https://github.com/pestechnology/PCAP-Analysis-System.git
+cd PCAP-Analysis-System
 ```
 
 ---
@@ -314,6 +314,17 @@ Install dependencies
 ```
 pip install -r requirements.txt
 ```
+
+---
+
+## 2b Run the Backend Server (Uvicorn)
+
+Once dependencies are installed and your virtual environment is active, start the FastAPI backend with:
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+> **Important:** Run this command from inside the `backend/` directory, with your virtual environment activated.
 
 ---
 
@@ -362,7 +373,21 @@ This will initialize:
 
 After deployment:
 
+### Backend (Uvicorn — recommended for development)
+
+Navigate to the `backend/` directory and run:
+
+```bash
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
 ### Frontend Dashboard
+In a separate terminal, navigate to the `frontend/` directory and run:
+
+```bash
+npm start
+```
+
 Access the interactive SOC interface:
 ```
 http://localhost:3000
@@ -524,7 +549,7 @@ Please read our full **[Contributing Guidelines](CONTRIBUTING.md)** before submi
 
 ### Reporting Bugs
 
-Open a [GitHub Issue](https://github.com/MohitPal0212/pcap_analysis_system/issues) and include:
+Open a [GitHub Issue](https://github.com/pestechnology/PCAP-Analysis-System/issues) and include:
 - A clear, descriptive title
 - Steps to reproduce the issue
 - Expected vs. actual behavior
@@ -570,8 +595,8 @@ See [SECURITY.md](SECURITY.md) for supported versions, scope, and the full discl
 
 | Channel | Purpose |
 |---|---|
-| [GitHub Issues](https://github.com/MohitPal0212/pcap_analysis_system/issues) | Bug reports & feature requests |
-| [GitHub Discussions](https://github.com/MohitPal0212/pcap_analysis_system/discussions) | General questions, ideas, and community chat |
+| [GitHub Issues](https://github.com/pestechnology/PCAP-Analysis-System/issues) | Bug reports & feature requests |
+| [GitHub Discussions](https://github.com/pestechnology/PCAP-Analysis-System/discussions) | General questions, ideas, and community chat |
 | **Email** — office.isfcr@pes.edu | Academic & research collaboration inquiries |
 | **Email** — mp65742@gmail.com | Direct maintainer contact |
 
