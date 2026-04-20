@@ -19,7 +19,7 @@
  */
 
 import React from 'react';
-import { Target, Activity, Share2, Server } from 'lucide-react';
+import { Target, Share2 } from 'lucide-react';
 
 const SCTPCard = ({ data }) => {
     const { 

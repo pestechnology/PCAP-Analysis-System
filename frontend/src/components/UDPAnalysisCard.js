@@ -36,7 +36,6 @@ export default function UDPAnalysisCard({ data }) {
     const suricataSummary = data.suricata_summary || { High: 0, Medium: 0, Low: 0 };
 
     // Check if there's any content for the left column (Priority Targets or Flagged Entities)
-    const hasLeftColumnContent = priorityTargets.length > 0 || flagged.length > 0;
 
     // Robustly calculate status based on actual array lengths to avoid stale backend payloads overriding the view
     let status = "clean";

@@ -20,13 +20,17 @@ import requests
 import os
 
 FEED_URL = "https://urlhaus.abuse.ch/downloads/hostfile/"
-CACHE_FILE = "threat_intel/domain_feed.txt"
+
+# Absolute path so the file resolves correctly regardless of where
+# uvicorn / the process is launched from.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+CACHE_FILE = os.path.join(_HERE, "..", "..", "threat_intel", "domain_feed.txt")
 
 def update_feed():
     try:
         response = requests.get(FEED_URL, timeout=10)
         if response.status_code == 200:
-            os.makedirs("threat_intel", exist_ok=True)
+            os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
             with open(CACHE_FILE, "w") as f:
                 f.write(response.text)
     except Exception:

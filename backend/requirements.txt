@@ -12,3 +12,4 @@ passlib[bcrypt]
 python-jose[cryptography]
 reportlab
 orjson
+apscheduler

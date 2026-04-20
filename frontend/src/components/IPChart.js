@@ -22,9 +22,8 @@ import React, { useMemo } from "react";
 import { Network } from "lucide-react";
 
 export default function IPChart({ data }) {
-    const distribution = data?.ip_distribution || {};
-
     const { total, items } = useMemo(() => {
+        const distribution = data?.ip_distribution || {};
         let sum = 0;
         const mapped = Object.entries(distribution).map(([label, count]) => {
             sum += count;
@@ -50,7 +49,7 @@ export default function IPChart({ data }) {
                 color: colors[item.label] || fallbackColors[i % fallbackColors.length]
             })).sort((a, b) => b.count - a.count)
         };
-    }, [distribution]);
+    }, [data?.ip_distribution]);
 
     if (total === 0) {
         return (

@@ -31,6 +31,8 @@ from backend.analysis_engine import analyze_parallel, analysis_progress
 from backend.utils.file_validation import validate_pcap_file
 from backend.core.report_builder import build_csv, build_pdf
 from backend.core.chunk_splitter import split_pcap_by_size
+from backend.threat_intel.feed_manager import update_feed
+from apscheduler.schedulers.background import BackgroundScheduler
 
 try:
     from core.pipeline import AnalysisPipeline
@@ -47,6 +49,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ---------------------------------------------------------------------------
+# DOMAIN THREAT FEED — auto-refresh every 24 hours
+# The feed is pulled from URLhaus (abuse.ch) which publishes active malware
+# distribution domains. An immediate refresh runs at startup so the feed is
+# never stale after a cold start.
+# ---------------------------------------------------------------------------
+_feed_scheduler = BackgroundScheduler(daemon=True)
+_feed_scheduler.add_job(update_feed, "interval", hours=24, id="domain_feed_refresh")
+_feed_scheduler.start()
+update_feed()  # refresh immediately on startup
 
 @app.get("/system-info")
 def system_info():

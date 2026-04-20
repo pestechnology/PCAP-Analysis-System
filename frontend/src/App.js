@@ -19,7 +19,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, useNavigate, Outlet, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from "react-router-dom";
 import Upload from "./components/Upload";
 import Dashboard from "./pages/Dashboard";
 import Protocols from "./pages/Protocols";

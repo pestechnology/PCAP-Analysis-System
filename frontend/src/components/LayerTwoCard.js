@@ -19,7 +19,7 @@
  */
 
 import React from 'react';
-import { Layers, Share2, GitBranch, Crosshair } from 'lucide-react';
+import { Layers, Share2 } from 'lucide-react';
 
 const LayerTwoCard = ({ data }) => {
     const { 

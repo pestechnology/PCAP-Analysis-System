@@ -30,10 +30,6 @@ export default function PacketExplorer({ data }) {
     const [dstFilter, setDstFilter] = useState("");
     const [lengthFilter, setLengthFilter] = useState("");
 
-    // SAFE ACCESS
-    const packets =
-        data?.protocol_packets?.[protocol] || [];
-
     /* ===============================
        Timestamp Formatter
     =============================== */
@@ -52,10 +48,11 @@ export default function PacketExplorer({ data }) {
         });
     };
 
-    /* ===============================
-       Filtering Logic
-    =============================== */
     const filteredPackets = useMemo(() => {
+        // SAFE ACCESS
+        const packets =
+            data?.protocol_packets?.[protocol] || [];
+
         return packets.filter((pkt) => {
 
             const matchSrc =
@@ -72,7 +69,7 @@ export default function PacketExplorer({ data }) {
 
             return matchSrc && matchDst && matchLength;
         });
-    }, [packets, srcFilter, dstFilter, lengthFilter]);
+    }, [data, protocol, srcFilter, dstFilter, lengthFilter]);
 
     /* ===============================
        Render Guards AFTER Hooks

@@ -34,8 +34,7 @@ countries.forEach((c) => {
     }
 });
 
-/* HQ Location (e.g., Data Center / SOC HQ setup) */
-const HQ_COORDS = [37.7749, -122.4194]; // San Francisco
+/* HQ Location (Data Center / SOC HQ setup) - previously removed */
 const EARTH_RADIUS = 2;
 
 /* ================================
@@ -55,48 +54,7 @@ function latLongToVector3(lat, lon, radius = EARTH_RADIUS + 0.05) {
 /* ================================
    Connection Arcs & Pulses
 ================================ */
-function getSplineFromCoords(startVec, endVec, altitude = 0.15) {
-    const distance = startVec.distanceTo(endVec);
-    const midPoint = startVec.clone().lerp(endVec, 0.5);
-    // Lower altitude multiplier for a tighter, more direct arc
-    midPoint.normalize().multiplyScalar(EARTH_RADIUS + distance * altitude);
-    return new THREE.QuadraticBezierCurve3(startVec, midPoint, endVec);
-}
 
-function PulseLight({ curve, color }) {
-    const meshRef = useRef();
-    const [progress] = useState(() => Math.random());
-    
-    useFrame((state, delta) => {
-        if (!meshRef.current) return;
-        // Faster, cleaner pulse speed
-        meshRef.current.userData.progress = (meshRef.current.userData.progress || progress) + delta * 0.6;
-        if (meshRef.current.userData.progress > 1) {
-            meshRef.current.userData.progress = 0;
-        }
-        
-        const p = curve.getPointAt(meshRef.current.userData.progress);
-        meshRef.current.position.copy(p);
-
-        // Optional: make the pulse look like a traveling beam by orienting it along the path
-        if (meshRef.current.userData.progress + 0.01 <= 1) {
-            const nextP = curve.getPointAt(meshRef.current.userData.progress + 0.01);
-            meshRef.current.lookAt(nextP);
-        }
-    });
-
-    return (
-        <mesh ref={meshRef}>
-            {/* Elongated packet shape (cylinder or scaled sphere) */}
-            <sphereGeometry args={[0.012, 8, 8]} />
-            <meshBasicMaterial color={color} />
-            <mesh scale={[1, 1, 3]}>
-                <sphereGeometry args={[0.015, 8, 8]} />
-                <meshBasicMaterial color={color} transparent opacity={0.6} />
-            </mesh>
-        </mesh>
-    );
-}
 
 /* ================================
    Camera Focus Controller
@@ -187,18 +145,16 @@ export default function GeoGlobeDashboard({ countryData = [] }) {
     }
     const percentage = formatTrafficShare(selectedPackets, totalPackets);
 
-    // Compute max packets for color coding
     const maxPackets = sortedData.length > 0 ? sortedData[0][1] : 1;
-    function getSeverityColor(packets) {
-        const ratio = packets / maxPackets;
-        if (ratio > 0.5) return "#FF003C"; // Critical (Red)
-        if (ratio > 0.1) return "#FF9900"; // Suspicious (Orange)
-        return "#00F0FF"; // Normal (Cyan)
-    }
-
-    const hqVector = useMemo(() => latLongToVector3(HQ_COORDS[0], HQ_COORDS[1]), []);
 
     const markers = useMemo(() => {
+        function getSeverityColor(packets) {
+            const ratio = packets / maxPackets;
+            if (ratio > 0.5) return "#FF003C"; // Critical (Red)
+            if (ratio > 0.1) return "#FF9900"; // Suspicious (Orange)
+            return "#00F0FF"; // Normal (Cyan)
+        }
+
         return sortedData
             .map(([country, packets]) => {
 

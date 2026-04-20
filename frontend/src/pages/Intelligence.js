@@ -59,7 +59,6 @@ export default function Intelligence({ data }) {
     const [senders, setSenders] = useState([]);
     const [receivers, setReceivers] = useState([]);
     const [expandedIP, setExpandedIP] = useState(null);
-    const [collapsed, setCollapsed] = useState(false)
 
     useEffect(() => {
         setSenders(data?.top_senders || []);
