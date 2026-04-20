@@ -12,6 +12,7 @@ This system was developed as part of a cybersecurity research and industry colla
 - [Overview](#overview)
 - [System Architecture](#system-architecture)
 - [Project Structure](#project-structure)
+- [Component Documentation](#component-documentation)
 - [Features](#features)
 - [Forensic Confidence Score (HACFCS)](#forensic-confidence-score-hacfcs)
 - [Report Generation](#report-generation)
@@ -166,6 +167,27 @@ pcap_analysis_system
 ├── README.md
 └── .gitignore
 ```
+
+---
+
+# Component Documentation
+
+Every backend module and frontend component has a plain-English description in **[COMPONENTS.md](COMPONENTS.md)**.
+
+The document is organised to match the directory layout of the repository:
+
+| Section | What it covers |
+|---|---|
+| **Backend — Entry Points** | `main.py` (API routes), `analysis_engine.py` (parallel orchestrator), `statistics.py` (streaming packet parser) |
+| **Backend — Core Engine** | `forensic_scorer`, `layer2_analysis`, `credential_extractor`, `file_extractor`, `http_extractor`, `report_builder`, `udp_analysis`, and all supporting modules |
+| **Backend — IDS** | `suricata_engine` (offline mode runner + EVE parser), `http_threat_detector` (HTTP-specific alert filter) |
+| **Backend — Services** | VirusTotal client (`threat_intel.py`) and the domain intelligence engine |
+| **Backend — Utils** | `file_validation.py` (extension + magic-byte checks), `system_info.py` (hardware snapshot) |
+| **Frontend — Shell** | `App.js` (routing + global state), `api.js` (all fetch calls) |
+| **Frontend — Pages** | `Home`, `Dashboard`, `Protocols`, `Intelligence`, `Content`, `Forensic`, `PacketExplorer`, `PacketDetailPage` |
+| **Frontend — Components** | All 34 UI components with their data dependencies and rendering responsibilities |
+
+If you are modifying an existing module, please keep the corresponding entry in `COMPONENTS.md` up to date.
 
 ---
 
