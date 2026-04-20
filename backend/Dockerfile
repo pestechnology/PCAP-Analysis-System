@@ -14,7 +14,7 @@ RUN suricata-update
 
 COPY . /app
 
-RUN pip install --no-cache-dir -r backend/requirements.txt
+RUN pip install --no-cache-dir --timeout 300 -r backend/requirements.txt
 
 ENV PYTHONPATH=/app
 
