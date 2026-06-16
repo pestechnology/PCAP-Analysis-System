@@ -292,6 +292,24 @@ For analyzing larger PCAP files or running multiple analyses in parallel:
 
 ---
 
+# Prerequisites
+
+Before installing the application, ensure the following software is installed on your system. These are required on **all operating systems**.
+
+| Prerequisite | Minimum Version | Download |
+|---|---|---|
+| **Python** | 3.11 or later | https://www.python.org/downloads/ |
+| **Node.js** | 18 or later | https://nodejs.org/ |
+| **Git** | Any recent version | https://git-scm.com/ |
+| **TShark** | Any recent version | Included with Wireshark — https://www.wireshark.org/download.html |
+| **Suricata** *(optional — for IDS features)* | 6.0 or later | https://suricata.io/download/ |
+
+> **Windows users:** During Python installation, check the box that says **"Add Python to PATH"** before clicking Install. This is required for the `python` and `pip` commands to be recognised in the terminal.
+
+> **Windows users:** During Node.js installation, accept the option to install the necessary tools (Chocolatey). This avoids build errors when installing frontend dependencies.
+
+---
+
 # Installation Instructions
 
 ## 1 Clone the Repository
@@ -305,35 +323,53 @@ cd PCAP-Analysis-System
 
 ## 2 Backend Setup
 
-Navigate to backend directory
+Navigate to the **backend** directory:
 
-```
+```bash
 cd backend
 ```
 
-Create virtual environment
+### Create a Virtual Environment
 
-```
+Choose the command for your operating system:
+
+**macOS / Linux**
+```bash
 python3 -m venv venv
 ```
 
-Activate environment
-
-Mac/Linux
-
+**Windows (Command Prompt or PowerShell)**
+```cmd
+python -m venv venv
 ```
+
+> **Note:** On Windows, the Python executable is typically named `python`, not `python3`. If `python` is not recognised, verify that Python was installed with **"Add Python to PATH"** enabled (see Prerequisites above).
+
+### Activate the Virtual Environment
+
+**macOS / Linux**
+```bash
 source venv/bin/activate
 ```
 
-Windows
-
+**Windows — Command Prompt**
+```cmd
+venv\Scripts\activate.bat
 ```
-venv\Scripts\activate
+
+**Windows — PowerShell**
+```powershell
+venv\Scripts\Activate.ps1
 ```
 
-Install dependencies
+> **PowerShell note:** If you receive an error about execution policy, run the following command first, then re-run the activation command:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
 
-```
+### Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
@@ -341,12 +377,21 @@ pip install -r requirements.txt
 
 ## 2b Run the Backend Server (Uvicorn)
 
-Once dependencies are installed and your virtual environment is active, start the FastAPI backend with:
+Once dependencies are installed and your virtual environment is active, **navigate back to the project root** (the `PCAP-Analysis-System` directory) and start the FastAPI backend:
 
+**macOS / Linux**
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+cd ..
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
-> **Important:** Run this command from inside the `backend/` directory, with your virtual environment activated.
+
+**Windows (Command Prompt or PowerShell)**
+```cmd
+cd ..
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+> **Important:** The command must be run from the **project root directory** (`PCAP-Analysis-System/`), not from inside `backend/`. The application uses module-level imports that require the project root to be on the Python path. Running `uvicorn main:app` from inside `backend/` will cause an `ImportError`.
 
 ---
 
@@ -397,16 +442,32 @@ After deployment:
 
 ### Backend (Uvicorn — recommended for development)
 
-Navigate to the `backend/` directory and run:
+From the **project root directory** (`PCAP-Analysis-System/`), with your virtual environment activated, run:
 
+**macOS / Linux**
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Frontend Dashboard
-In a separate terminal, navigate to the `frontend/` directory and run:
+**Windows (Command Prompt or PowerShell)**
+```cmd
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
+> **Note:** Always run this command from the project root, not from inside the `backend/` directory. See [Troubleshooting](#troubleshooting) if the server fails to start.
+
+### Frontend Dashboard
+In a **separate terminal**, navigate to the `frontend/` directory and run:
+
+**macOS / Linux**
 ```bash
+cd frontend
+npm start
+```
+
+**Windows (Command Prompt or PowerShell)**
+```cmd
+cd frontend
 npm start
 ```
 
@@ -433,6 +494,77 @@ The sidebar provides access to the following views:
 | `/intelligence` | Intelligence | GeoIP, threat intel, domain analysis |
 | `/content` | Content | Extracted files, credentials, HTTP transactions |
 | `/forensic` | Forensic Score | HACFCS score, triage tier, and evidence signals |
+
+---
+
+# Troubleshooting
+
+### `python3` is not recognised (Windows)
+
+**Symptom:** Running `python3 -m venv venv` returns `'python3' is not recognized as an internal or external command`.
+
+**Fix:** On Windows, use `python` instead of `python3`:
+```cmd
+python -m venv venv
+```
+If `python` is also not recognised, Python is not on your PATH. Re-run the Python installer and check **"Add Python to PATH"**.
+
+---
+
+### Virtual environment activation is blocked (Windows PowerShell)
+
+**Symptom:** Running `venv\Scripts\Activate.ps1` returns a script execution policy error.
+
+**Fix:** Run the following command once in PowerShell (as your user, no administrator required), then retry activation:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+---
+
+### Backend fails to start — `ImportError` or `ModuleNotFoundError`
+
+**Symptom:** Running `uvicorn main:app` from inside the `backend/` directory produces a traceback similar to:
+```
+ImportError: attempted relative import with no known parent package
+```
+or errors importing `backend.services`, `backend.core`, etc.
+
+**Fix:** The uvicorn command must be run from the **project root directory**, not from inside `backend/`. The application uses package-level imports that require the project root on the Python path:
+
+```bash
+# Make sure you are in PCAP-Analysis-System/ (project root)
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+---
+
+### `npm start` fails — `node_modules` not found
+
+**Symptom:** Starting the frontend returns `Cannot find module` errors.
+
+**Fix:** Run `npm install` first from inside the `frontend/` directory:
+```bash
+cd frontend
+npm install
+npm start
+```
+
+---
+
+### TShark not found
+
+**Symptom:** HTTP stream reconstruction (`/api/http-stream/`) returns a 500 error mentioning `tshark`.
+
+**Fix:** Install Wireshark (which bundles TShark) from https://www.wireshark.org/download.html. During installation, ensure the option to install TShark is selected. On Linux:
+```bash
+sudo apt install tshark   # Ubuntu/Debian
+sudo dnf install wireshark-cli   # Fedora/RHEL
+```
+On macOS:
+```bash
+brew install wireshark
+```
 
 ---
 
